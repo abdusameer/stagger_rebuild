@@ -56,15 +56,21 @@
         </div>
       </div>
 
-      <figure class="hero__media" data-hero-media>
-        <video class="hero__video" autoplay muted loop playsinline preload="auto"
-          disablepictureinpicture disableremoteplayback
-          poster="stagger/video/hero/hero-montage-poster.webp" data-hero-video
-          aria-label="Close-up footage of Stagger drinks: matcha, espresso and iced latte over ice">
-          <source src="stagger/video/hero/hero-montage-720.mp4" type="video/mp4" media="(max-width: 760px)">
-          <source src="stagger/video/hero/hero-montage-1080.mp4" type="video/mp4">
-        </video>
-      </figure>
+      <div class="hero__stage" data-hero-stage>
+        <span class="hero__light" aria-hidden="true"><i></i></span>
+        <figure class="hero__media" data-hero-media>
+          <span class="hero__disc" data-hero-disc>
+            <video class="hero__video" autoplay muted loop playsinline preload="auto"
+              disablepictureinpicture disableremoteplayback
+              poster="stagger/video/hero/hero-montage-poster.webp" data-hero-video
+              aria-label="Close-up footage of Stagger drinks: matcha, espresso and iced latte over ice">
+              <source src="stagger/video/hero/hero-montage-720.mp4" type="video/mp4" media="(max-width: 760px)">
+              <source src="stagger/video/hero/hero-montage-1080.mp4" type="video/mp4">
+            </video>
+          </span>
+          <span class="hero__rim" aria-hidden="true"></span>
+        </figure>
+      </div>
 
       <h1 class="hero__title" data-hero-title>
         <span class="sr-only">Balance the unbalanced.</span>
@@ -273,68 +279,125 @@
         </div>
       </div>
 
-      <div class="mshop">
-        <div class="mshop__lead" data-reveal>
-          <p class="label">From the shop</p>
-          <h3 class="mshop__name">Organic Ceremonial Matcha <span>(30g)</span></h3>
-          <p class="mshop__note">Hand-picked from the first harvest. Stone-ground. 100% certified organic.</p>
-          <p class="mshop__price">$35.00</p>
-          <a class="btn" href="https://staggercoffee.com/products/stagger-organic-ceremonial-matcha-30g">Shop matcha</a>
-        </div>
+      <div class="mshop" data-mshop>
+        <div class="mshop__track" data-mshop-track>
+          <div class="mshop__stage">
+            <div class="mshop__lead">
+              <p class="label">From the shop</p>
+              <h3 class="mshop__name">Organic Ceremonial Matcha <span>(30g)</span></h3>
+              <p class="mshop__note">Hand-picked from the first harvest. Stone-ground. 100% certified organic.</p>
+              <p class="mshop__price">$35.00</p>
+              <a class="btn" href="https://staggercoffee.com/products/stagger-organic-ceremonial-matcha-30g">Shop matcha</a>
+              <p class="label mshop__step"><span data-mshop-step>01</span> / 04 — <span data-mshop-name>Complete the ritual</span></p>
+            </div>
 
-        <div class="mshop__tools">
-          <p class="label mshop__tools-label" data-reveal>Complete the ritual</p>
-          <ul>
-            <li data-reveal>
+            <ul class="mshop__objects">
+            <li class="mobj mobj--matcha" data-mobj>
+              <a href="https://staggercoffee.com/products/stagger-organic-ceremonial-matcha-30g">
+                <figure><img src="stagger/images/matcha/organic-ceremonial-matcha-tin-1-1000.webp" width="1000" height="1500" loading="lazy" decoding="async" alt="A Stagger matcha tin set on a steel plate between a fork and knife"></figure>
+                <span class="label mobj__cat">Matcha</span>
+                <span class="mobj__name">Organic Ceremonial Matcha (30g)</span>
+                <span class="mobj__price">$35.00</span>
+              </a>
+            </li>
+            <li class="mobj mobj--whisk" data-mobj>
               <a href="https://staggercoffee.com/products/bamboo-matcha-whisk-chasen">
                 <figure><img src="stagger/images/matcha/bamboo-whisk-chasen-1-800.webp" width="800" height="1200" loading="lazy" decoding="async" alt="Black Stagger matcha whisk tube on a steel surface"></figure>
-                <span class="mshop__tool">Bamboo Matcha Whisk (Chasen)</span>
-                <span class="mshop__tool-price">$25.00</span>
+                <span class="label mobj__cat">Whisk</span>
+                <span class="mobj__name">Bamboo Matcha Whisk (Chasen)</span>
+                <span class="mobj__price">$25.00</span>
               </a>
             </li>
-            <li data-reveal>
+            <li class="mobj mobj--scoop" data-mobj>
               <a href="https://staggercoffee.com/products/bamboo-matcha-scoop-chashaku">
                 <figure><img src="stagger/images/matcha/bamboo-scoop-chashaku-1-800.webp" width="800" height="1200" loading="lazy" decoding="async" alt="Stagger matcha tins, whisk tube and a boxed bamboo scoop on a black stool"></figure>
-                <span class="mshop__tool">Bamboo Matcha Scoop (Chashaku)</span>
-                <span class="mshop__tool-price">$5.00</span>
+                <span class="label mobj__cat">Scoop</span>
+                <span class="mobj__name">Bamboo Matcha Scoop (Chashaku)</span>
+                <span class="mobj__price">$5.00</span>
               </a>
             </li>
-            <li data-reveal>
+            <li class="mobj mobj--set" data-mobj>
               <a href="https://staggercoffee.com/products/ceramic-matcha-bowl-set-1">
                 <figure><img src="stagger/images/matcha/ceramic-bowl-set-4-800.webp" width="800" height="1200" loading="lazy" decoding="async" alt="Open black Stagger matcha bowl set box printed Your daily ritual starts here"></figure>
-                <span class="mshop__tool">Ceramic Matcha Bowl Set</span>
-                <span class="mshop__tool-price">$45.00</span>
+                <span class="label mobj__cat">Complete set</span>
+                <span class="mobj__name">Ceramic Matcha Bowl Set</span>
+                <span class="mobj__price">$45.00</span>
               </a>
             </li>
-          </ul>
+            </ul>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- COFFEE -->
-    <section class="coffee" id="coffee" data-theme="oat">
-      <header class="coffee__head">
-        <p class="label"><span class="idx">04</span> Coffee</p>
-        <h2 class="display coffee__title" data-split>Clean, <em class="serif">bright</em> coffee.</h2>
-      </header>
-      <figure class="coffee__wide" data-reveal>
-        <img src="stagger/images/coffee/latte-art-cappuccino-coffee-beans-1200.webp"
-          srcset="stagger/images/coffee/latte-art-cappuccino-coffee-beans-1200.webp 1200w, stagger/images/coffee/latte-art-cappuccino-coffee-beans-2000.webp 2000w"
-          sizes="(min-width: 1024px) 62vw, 92vw" width="1200" height="800" loading="lazy" decoding="async"
-          alt="A cappuccino with rosetta latte art in a Stagger cup, surrounded by scattered coffee beans on a wooden stool">
-      </figure>
-      <div class="coffee__bean" data-reveal>
-        <figure>
-          <img src="stagger/images/coffee/coffee-bean-bag-1-900.webp" width="900" height="1350" loading="lazy" decoding="async"
-            alt="A white Stagger coffee bag spilling whole roasted beans">
-        </figure>
-        <dl class="specs">
-          <div><dt>Origin</dt><dd>Brazil &amp; Colombia</dd></div>
-          <div><dt>Roast</dt><dd>Medium-dark</dd></div>
-          <div><dt>Notes</dt><dd>Honey, cacao, dried fruit</dd></div>
-          <div><dt>Roasted</dt><dd>Los Angeles</dd></div>
-        </dl>
-        <a class="link" href="https://staggercoffee.com/products/stagger-coffee-bean">STAGGER Coffee Bean — $20 <span aria-hidden="true">→</span></a>
+    <section class="coffee" id="coffee" data-theme="oat" data-coffee>
+      <div class="cstory" data-cstory>
+        <div class="cstory__stage" data-cstory-stage>
+          <span class="cstory__sun" aria-hidden="true"><i></i></span>
+
+          <article class="cchap cchap--cup" data-cchap>
+            <div class="cchap__copy">
+              <p class="label"><span class="idx">04</span> Coffee</p>
+              <h2 class="display coffee__title" data-split>Clean, <em class="serif">bright</em> coffee.</h2>
+            </div>
+            <figure class="cchap__media" data-fade>
+              <img src="stagger/images/coffee/latte-art-cappuccino-coffee-beans-1200.webp"
+                srcset="stagger/images/coffee/latte-art-cappuccino-coffee-beans-1200.webp 1200w, stagger/images/coffee/latte-art-cappuccino-coffee-beans-2000.webp 2000w"
+                sizes="(min-width: 1024px) 56vw, 92vw" width="1200" height="800" loading="lazy" decoding="async"
+                alt="A cappuccino with rosetta latte art in a Stagger cup, surrounded by scattered coffee beans on a wooden stool">
+            </figure>
+          </article>
+
+          <article class="cchap cchap--beans" data-cchap>
+            <div class="cchap__copy">
+              <p class="label cchap__n">i — Beans</p>
+              <h3 class="cchap__t">Whole bean.</h3>
+              <p class="cchap__b">Roasted in Los Angeles.</p>
+            </div>
+            <figure class="cchap__media" data-fade>
+              <img src="stagger/images/coffee/roast-bean-macro-1400.webp"
+                srcset="stagger/images/coffee/roast-bean-macro-1400.webp 1400w, stagger/images/coffee/roast-bean-macro-2200.webp 2200w"
+                sizes="(min-width: 1024px) 58vw, 96vw" width="2752" height="1536" loading="lazy" decoding="async"
+                alt="Extreme close-up of a roasted coffee bean, its oily surface and centre crease lit warmly">
+            </figure>
+          </article>
+
+          <article class="cchap cchap--roast" data-cchap>
+            <div class="cchap__copy">
+              <p class="label cchap__n">ii — Roast</p>
+              <dl class="specs">
+                <div><dt>Origin</dt><dd>Brazil &amp; Colombia</dd></div>
+                <div><dt>Roast</dt><dd>Medium-dark</dd></div>
+                <div><dt>Notes</dt><dd>Honey, cacao, dried fruit</dd></div>
+                <div><dt>Roasted</dt><dd>Los Angeles</dd></div>
+              </dl>
+            </div>
+            <figure class="cchap__media" data-fade>
+              <img src="stagger/images/coffee/bean-at-rest-557.webp" width="557" height="400" loading="lazy" decoding="async"
+                alt="A single roasted coffee bean resting in sunlight on a pale surface, scattered with fine grounds">
+            </figure>
+          </article>
+
+          <article class="cchap cchap--product" data-cchap>
+            <div class="cchap__copy">
+              <p class="label cchap__n">iii — Product</p>
+              <h3 class="cchap__t">STAGGER Coffee Bean</h3>
+              <p class="cchap__price">$20.00</p>
+              <a class="btn" href="https://staggercoffee.com/products/stagger-coffee-bean">Shop coffee</a>
+            </div>
+            <figure class="cchap__media" data-fade>
+              <img src="stagger/images/coffee/coffee-bean-bag-1-900.webp"
+                srcset="stagger/images/coffee/coffee-bean-bag-1-900.webp 900w, stagger/images/coffee/coffee-bean-bag-1-1200.webp 1200w"
+                sizes="(min-width: 1024px) 42vw, 86vw" width="1365" height="2048" loading="lazy" decoding="async"
+                alt="A white Stagger coffee bag spilling whole roasted beans across a warm surface">
+            </figure>
+          </article>
+
+          <ol class="cstory__index" aria-hidden="true">
+            <li>Cup</li><li>Beans</li><li>Roast</li><li>Product</li>
+          </ol>
+        </div>
       </div>
     </section>
 
@@ -413,10 +476,35 @@
       </figure>
       <div class="press" data-reveal>
         <p class="label">In the press</p>
-        <ul>
-          <li>The Infatuation</li><li>LAist</li><li>Voyage LA</li><li>Larchmont Buzz</li><li>Joe Coffee</li><li>Forsyte</li>
+        <ul class="press__list" id="press-list" data-press-list>
+          <li>
+            <a href="https://www.theinfatuation.com/los-angeles/reviews/stagger-coffee" target="_blank" rel="noopener noreferrer">The Infatuation<span class="press__arrow" aria-hidden="true">↗</span></a>
+            <span class="press__desc">Review — Koreatown</span>
+          </li>
+          <li>
+            <a href="https://laist.com/news/food/finding-your-cup-of-tea-among-las-matcha-offerings" target="_blank" rel="noopener noreferrer">LAist<span class="press__arrow" aria-hidden="true">↗</span></a>
+            <span class="press__desc">LA matcha guide</span>
+          </li>
+          <li>
+            <a href="https://voyagela.com/interview/exploring-life-business-with-stagger-coffee-of-stagger-coffee" target="_blank" rel="noopener noreferrer">Voyage LA<span class="press__arrow" aria-hidden="true">↗</span></a>
+            <span class="press__desc">Interview with the team</span>
+          </li>
+          <li>
+            <a href="https://larchmontbuzz.com/larchmont-village-news/larchmont-celebrates-a-very-laufey-day/" target="_blank" rel="noopener noreferrer">Larchmont Buzz<span class="press__arrow" aria-hidden="true">↗</span></a>
+            <span class="press__desc">Laufey day — A Matcha in Time</span>
+          </li>
+          <li>
+            <a href="https://joe.coffee/locations/ca/los-angeles/stagger-coffee-los-angeles/" target="_blank" rel="noopener noreferrer">Joe Coffee<span class="press__arrow" aria-hidden="true">↗</span></a>
+            <span class="press__desc">Order-ahead listing</span>
+          </li>
+          <li>
+            <a href="https://foresyteapp.com/stagger-coffee-los-angeles/" target="_blank" rel="noopener noreferrer">Forsyte<span class="press__arrow" aria-hidden="true">↗</span></a>
+            <span class="press__desc">City guide listing</span>
+          </li>
         </ul>
-        <a class="link" href="https://staggercoffee.com/pages/press">Read the features <span aria-hidden="true">→</span></a>
+        <button class="link press__toggle" type="button" data-press-toggle aria-expanded="false" aria-controls="press-list">
+          <span data-press-label>Read the features</span> <span aria-hidden="true">→</span>
+        </button>
       </div>
     </section>
 

@@ -66,13 +66,17 @@
   const heroMedia = $('[data-hero-media]');
   const lightCopy = $('[data-ttl-light]');
 
+  const heroStage = $('[data-hero-stage]');
+
   function measureSplit() {
-    if (!heroTitle || !heroMedia || !lightCopy) return;
+    if (!heroTitle || !heroStage || !lightCopy) return;
     const t = heroTitle.getBoundingClientRect();
-    const m = heroMedia.getBoundingClientRect();
-    lightCopy.style.setProperty('--split', `${Math.max(0, m.left - t.left)}px`);
-    const bottomClip = Math.max(0, t.bottom - m.bottom);
-    lightCopy.style.clipPath = `inset(0 0 ${bottomClip}px ${Math.max(0, m.left - t.left)}px)`;
+    // Measure the stage, not the spinning disc: a rotating square reports a larger box.
+    const d = heroStage.getBoundingClientRect();
+    if (!d.width) return;
+    // The stage is a circle, so the light copy is clipped to that circle.
+    const r = d.width / 2;
+    lightCopy.style.clipPath = `circle(${r.toFixed(1)}px at ${(d.left + r - t.left).toFixed(1)}px ${(d.top + r - t.top).toFixed(1)}px)`;
   }
   measureSplit();
   addEventListener('resize', measureSplit, { passive: true });
@@ -411,10 +415,20 @@
       scrollTrigger: { trigger: '[data-hero]', start: 'top top', end: '45% top', scrub: 0.8 },
     });
     gsap.to('.hero__video', {
-      scale: 1.04,
+      scale: 1.02,
       ease: 'none',
       scrollTrigger: { trigger: '[data-hero]', start: 'top top', end: 'bottom top', scrub: true },
     });
+
+    // The circle drifts a little toward equilibrium as the hero leaves.
+    const stage = $('[data-hero-stage]');
+    if (stage) {
+      gsap.to(stage, {
+        x: -26, y: 22, scale: 1.015,
+        ease: 'none',
+        scrollTrigger: { trigger: '[data-hero]', start: 'top top', end: 'bottom top', scrub: 0.9, onUpdate: measureSplit },
+      });
+    }
 
     gsap.to('.footer__un .lt', {
       '--y': 0,
@@ -496,14 +510,109 @@
     mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference) and (pointer: fine)', () =>
       studioLight(stage, { reach: 0.16, lerp: 0.035 }));
 
-    // Normal-flow fade for smaller screens.
+  }
+
+  /* ---------- Normal-flow fades (used where a section is not pinned) ---------- */
+  function initFades() {
+    if (!motionOK()) return;
+    root.classList.add('fade-ready');
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
+    }, { rootMargin: '0px 0px -10% 0px' });
+    $$('[data-fade]').forEach((el) => io.observe(el));
+  }
+
+  /* ---------- Matcha shop: assembling the ritual ---------- */
+  function initShop(mm) {
+    const section = $('[data-mshop]');
+    if (!section) return;
+    const track = $('[data-mshop-track]', section);
+    const objects = $$('[data-mobj]', section);
+    const stepNum = $('[data-mshop-step]', section);
+    const stepName = $('[data-mshop-name]', section);
+    const names = objects.map((o) => o.querySelector('.mobj__name').textContent.trim());
+
+    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference)', () => {
+      section.classList.add('is-sequenced');
+      let current = -1;
+      const setActive = (i) => {
+        if (i === current) return;
+        current = i;
+        // Objects accumulate: everything up to the current step stays on the table.
+        objects.forEach((el, k) => {
+          el.classList.toggle('is-in', k <= i);
+          el.classList.toggle('is-active', k === i);
+        });
+        stepNum.textContent = String(i + 1).padStart(2, '0');
+        stepName.textContent = names[i];
+      };
+      setActive(0);
+      const st = ScrollTrigger.create({
+        trigger: track, start: 'top top', end: 'bottom bottom',
+        onUpdate: (self) => setActive(Math.min(objects.length - 1, Math.floor(self.progress * objects.length))),
+      });
+      ScrollTrigger.refresh();
+      return () => {
+        section.classList.remove('is-sequenced');
+        st.kill();
+        objects.forEach((el) => el.classList.remove('is-in', 'is-active'));
+      };
+    });
+  }
+
+  /* ---------- Coffee: cup → beans → roast → product ---------- */
+  function initCoffee(mm) {
+    const section = $('[data-coffee]');
+    if (!section) return;
+    const track = $('[data-cstory]', section);
+    const stage = $('[data-cstory-stage]', section);
+    const chapters = $$('[data-cchap]', section);
+    const index = $$('.cstory__index li', section);
+
+    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference)', () => {
+      section.classList.add('is-sequenced');
+      const { cleanup } = sequence({
+        track,
+        items: chapters,
+        onChange: (i) => index.forEach((li, k) => li.classList.toggle('is-active', k === i)),
+      });
+      ScrollTrigger.refresh();
+      return () => {
+        section.classList.remove('is-sequenced');
+        cleanup();
+        index.forEach((li) => li.classList.remove('is-active'));
+      };
+    });
+
+    // A soft sunlight pool rather than a cursor glow.
+    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference) and (pointer: fine)', () =>
+      studioLight(stage, { reach: 0.14, lerp: 0.03 }));
+  }
+
+  /* ---------- Press: expand the verified features ---------- */
+  function initPress() {
+    const toggle = $('[data-press-toggle]');
+    if (!toggle) return;
+    const press = toggle.closest('.press');
+    const label = $('[data-press-label]', toggle);
+    toggle.addEventListener('click', () => {
+      const open = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!open));
+      press.classList.toggle('is-open', !open);
+      label.textContent = open ? 'Read the features' : 'Hide the features';
+      if (hasGSAP) ScrollTrigger.refresh();
+    });
+  }
+
+  /* ---------- Hero stage: spin only while on screen, respond to a fine pointer ---------- */
+  function initHeroStage(mm) {
+    const hero = $('[data-hero]');
+    if (!hero) return;
     if (motionOK()) {
-      root.classList.add('fade-ready');
-      const io = new IntersectionObserver((entries) => {
-        entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
-      }, { rootMargin: '0px 0px -10% 0px' });
-      $$('[data-fade]', section).forEach((el) => io.observe(el));
+      new IntersectionObserver(([e]) => hero.classList.toggle('is-live', e.isIntersecting), { rootMargin: '10% 0px' }).observe(hero);
     }
+    mm && mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference) and (pointer: fine)', () =>
+      studioLight(hero, { reach: 0.12, drift: 5, lerp: 0.05, lift: 1.01 }));
   }
 
   /* ---------- Boot ---------- */
@@ -523,8 +632,13 @@
   initOverlaps();
 
   const mm = gsap.matchMedia();
+  initHeroStage(mm);
   initDrinks(mm);
   initMatcha(mm);
+  initShop(mm);
+  initCoffee(mm);
+  initFades();
+  initPress();
 
   addEventListener('load', () => { measureSplit(); ScrollTrigger.refresh(); });
   document.fonts && document.fonts.ready.then(() => ScrollTrigger.refresh());

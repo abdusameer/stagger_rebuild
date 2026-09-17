@@ -66,6 +66,15 @@ webp "$M/images/matcha/ceramic-bowl-set-4.jpg" 800 82
 for w in 1200 2000; do webp "$M/images/coffee/latte-art-cappuccino-coffee-beans.jpg" $w; done
 webp "$M/images/coffee/coffee-bean-bag-1.jpg" 900
 
+
+# Coffee story (masters in "coffee selling")
+for w in 1400 2200; do webp "$M/images/coffee selling/Agent_Image___Extreme_macro_close_up_of_a_single_roasted_coffee_bean_s_surface__revealing_rich_roast.png" $w 84 "$M/images/coffee/roast-bean-macro-$w.webp"; done
+# One frame lifted from the supplied storyboard sheet (bean at rest, sunlit).
+ffmpeg -v error -y -i "$M/images/coffee selling/d3a1264c-94fd-4291-ba8b-601454f60cc3.png" -vf "crop=557:400:557:478" /tmp/stagger-bean-rest.png
+webp /tmp/stagger-bean-rest.png 557 88 "$M/images/coffee/bean-at-rest-557.webp"
+rm /tmp/stagger-bean-rest.png
+webp "$M/images/coffee/coffee-bean-bag-1.jpg" 1200
+
 # Objects
 webp "$M/images/matcha/organic-ceremonial-matcha-tin-1.jpg" 1000
 webp "$M/images/products/tumbler-1.jpg" 1000
@@ -77,7 +86,7 @@ for w in 1200 2000; do webp "$M/images/products/pastry-and-drink-flatlay-black-t
 webp "$M/images/lifestyle/red-green-drink-blue-sky.jpg" 1000
 webp "$M/images/interior/two-drinks-black-table-interior.jpg" 1000
 
-# Hero video: 1080p master -> 1080 (desktop) and 720 (mobile), no audio, fast-start.
+# Hero video: the original Stagger macro montage (1080p master) -> 1080 + 720, no audio, fast-start.
 HERO="$M/video/hero/macro-drink-montage-hq-1080p.mp4"
 ffmpeg -v error -y -i "$HERO" -an -c:v libx264 -preset slower -crf 22 -maxrate 2300k -bufsize 4600k \
   -pix_fmt yuv420p -profile:v high -level 4.1 -tune film -movflags +faststart "$M/video/hero/hero-montage-1080.mp4"
