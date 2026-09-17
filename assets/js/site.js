@@ -78,6 +78,42 @@
   addEventListener('resize', measureSplit, { passive: true });
   document.fonts && document.fonts.ready.then(measureSplit);
 
+
+  /* ---------- Hero video: poster first, fade in only once frames are playing ---------- */
+  function initHeroVideo() {
+    const video = $('[data-hero-video]');
+    if (!video || !heroMedia) return;
+    if (!motionOK()) {
+      video.removeAttribute('autoplay');
+      video.preload = 'metadata';
+      video.pause();
+      return;
+    }
+    let inView = true;
+    const markPlaying = () => heroMedia.classList.add('is-playing');
+    const tryPlay = () => {
+      if (!inView || document.hidden || !video.paused) return;
+      const p = video.play();
+      if (p && p.catch) p.catch(() => {});
+    };
+    video.addEventListener('playing', markPlaying);
+    video.addEventListener('canplay', tryPlay);
+    if (!video.paused && video.readyState > 2) markPlaying();
+    tryPlay();
+
+    const unlock = () => { tryPlay(); ['pointerdown', 'keydown', 'touchstart'].forEach((t) => removeEventListener(t, unlock)); };
+    ['pointerdown', 'keydown', 'touchstart'].forEach((t) => addEventListener(t, unlock, { passive: true }));
+
+    new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      if (inView) tryPlay(); else video.pause();
+    }, { rootMargin: '50% 0px' }).observe(heroMedia);
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) video.pause(); else tryPlay();
+    });
+  }
+
   /* ---------- Video: play only when visible ---------- */
   function initVideos() {
     const videos = $$('[data-video]');
@@ -156,6 +192,129 @@
     io.observe(el);
   }
 
+
+  /* ---------- Light copy of a heading wherever it crosses its photograph ---------- */
+  const overlaps = [];
+
+  function buildOverlap(el) {
+    if (el.querySelector('.overlap-light')) return el.querySelector('.overlap-light');
+    const media = $(el.dataset.overlap);
+    if (!media) return null;
+    const layer = document.createElement('span');
+    layer.className = 'overlap-light';
+    layer.setAttribute('aria-hidden', 'true');
+    [...el.childNodes].forEach((n) => {
+      if (n.nodeType === Node.ELEMENT_NODE && n.classList.contains('sr-only')) return;
+      const c = n.cloneNode(true);
+      if (c.nodeType === Node.ELEMENT_NODE) c.removeAttribute('aria-hidden');
+      layer.appendChild(c);
+    });
+    el.appendChild(layer);
+    overlaps.push({ el, media, layer });
+    measureOverlap({ el, media, layer });
+    return layer;
+  }
+
+  // Layout offsets ignore transforms, so reveal animations never throw the boundary off.
+  function measureOverlap({ el, media, layer }) {
+    const top = media.offsetTop - el.offsetTop;
+    const left = media.offsetLeft - el.offsetLeft;
+    const right = (el.offsetLeft + el.offsetWidth) - (media.offsetLeft + media.offsetWidth);
+    const bottom = (el.offsetTop + el.offsetHeight) - (media.offsetTop + media.offsetHeight);
+    layer.style.clipPath = `inset(${Math.max(0, top)}px ${Math.max(0, right)}px ${Math.max(0, bottom)}px ${Math.max(0, left)}px)`;
+  }
+
+  function initOverlaps() {
+    $$('[data-overlap]').forEach(buildOverlap);
+    if (!overlaps.length) return;
+    const remeasure = () => overlaps.forEach(measureOverlap);
+    const ro = new ResizeObserver(remeasure);
+    overlaps.forEach(({ el, media }) => { ro.observe(el); ro.observe(media); });
+    document.fonts && document.fonts.ready.then(remeasure);
+  }
+
+  /* ---------- Studio light: slow, damped response to a fine pointer ---------- */
+  function studioLight(stage, { reach = 0.2, drift = 0, lerp = 0.06, lift = 1 } = {}) {
+    let rect = null, raf = 0;
+    const t = { x: 0, y: 0, nx: 0, ny: 0, s: 1 };
+    const c = { x: 0, y: 0, nx: 0, ny: 0, s: 1 };
+    const write = () => {
+      stage.style.setProperty('--lx', `${c.x.toFixed(1)}px`);
+      stage.style.setProperty('--ly', `${c.y.toFixed(1)}px`);
+      if (drift) {
+        stage.style.setProperty('--dx', (c.nx * drift).toFixed(2));
+        stage.style.setProperty('--dy', (c.ny * drift).toFixed(2));
+        stage.style.setProperty('--ds', c.s.toFixed(4));
+      }
+    };
+    const tick = () => {
+      let settled = true;
+      for (const k of ['x', 'y', 'nx', 'ny', 's']) {
+        c[k] += (t[k] - c[k]) * lerp;
+        if (Math.abs(t[k] - c[k]) > (k === 'x' || k === 'y' ? 0.2 : 0.0005)) settled = false;
+      }
+      write();
+      raf = settled ? 0 : requestAnimationFrame(tick);
+    };
+    const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
+    const onEnter = () => { rect = stage.getBoundingClientRect(); stage.classList.add('is-lit'); t.s = lift; kick(); };
+    const onMove = (e) => {
+      if (!rect) rect = stage.getBoundingClientRect();
+      const px = (e.clientX - rect.left) / rect.width - 0.5;
+      const py = (e.clientY - rect.top) / rect.height - 0.5;
+      t.x = px * rect.width * reach;
+      t.y = py * rect.height * reach;
+      t.nx = px * 2;
+      t.ny = py * 2;
+      kick();
+    };
+    const onLeave = () => { stage.classList.remove('is-lit'); Object.assign(t, { x: 0, y: 0, nx: 0, ny: 0, s: 1 }); kick(); };
+    const invalidate = () => { rect = null; };
+    stage.addEventListener('pointerenter', onEnter);
+    stage.addEventListener('pointermove', onMove, { passive: true });
+    stage.addEventListener('pointerleave', onLeave);
+    addEventListener('scroll', invalidate, { passive: true });
+    addEventListener('resize', invalidate, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      stage.removeEventListener('pointerenter', onEnter);
+      stage.removeEventListener('pointermove', onMove);
+      stage.removeEventListener('pointerleave', onLeave);
+      removeEventListener('scroll', invalidate);
+      removeEventListener('resize', invalidate);
+      stage.classList.remove('is-lit');
+      ['--lx', '--ly', '--dx', '--dy', '--ds'].forEach((v) => stage.style.removeProperty(v));
+    };
+  }
+
+  /* ---------- Scroll sequence: one active chapter at a time ---------- */
+  function sequence({ track, items, onChange }) {
+    const n = items.length;
+    let current = -1;
+    const setActive = (i) => {
+      if (i === current) return;
+      current = i;
+      items.forEach((el, k) => {
+        el.classList.toggle('is-active', k === i);
+        el.classList.toggle('is-past', k < i);
+        el.setAttribute('aria-hidden', String(k !== i));
+      });
+      onChange && onChange(i);
+    };
+    setActive(0);
+    const st = ScrollTrigger.create({
+      trigger: track,
+      start: 'top top',
+      end: 'bottom bottom',
+      onUpdate: (self) => setActive(Math.min(n - 1, Math.floor(self.progress * n))),
+    });
+    const cleanup = () => {
+      st.kill();
+      items.forEach((el) => { el.classList.remove('is-active', 'is-past'); el.removeAttribute('aria-hidden'); });
+    };
+    return { st, cleanup };
+  }
+
   /* ---------- Themes: body colour follows the chapter ---------- */
   function initThemes() {
     if (!hasGSAP) return;
@@ -210,11 +369,13 @@
   function initReveals() {
     $$('[data-split]').forEach((el) => {
       const words = splitWords(el);
-      gsap.from(words, {
+      const layer = el.hasAttribute('data-overlap') ? buildOverlap(el) : null;
+      const targets = layer ? [...words, ...$$('.w > span', layer)] : words;
+      gsap.from(targets, {
         yPercent: 110,
         duration: 1,
         ease: 'power4.out',
-        stagger: 0.055,
+        stagger: (i) => (i % words.length) * 0.055,
         scrollTrigger: { trigger: el, start: 'top 86%', once: true },
       });
     });
@@ -223,7 +384,7 @@
     ScrollTrigger.batch('[data-reveal]', {
       start: 'top 90%',
       once: true,
-      onEnter: (batch) => gsap.fromTo(batch, { autoAlpha: 0, y: 28 }, {
+      onEnter: (batch) => gsap.fromTo(batch, { autoAlpha: 0, y: 10 }, {
         autoAlpha: 1, y: 0, duration: 1.1, ease: 'power3.out', stagger: 0.09, overwrite: true,
       }),
     });
@@ -250,7 +411,7 @@
       scrollTrigger: { trigger: '[data-hero]', start: 'top top', end: '45% top', scrub: 0.8 },
     });
     gsap.to('.hero__video', {
-      scale: 1.06,
+      scale: 1.04,
       ease: 'none',
       scrollTrigger: { trigger: '[data-hero]', start: 'top top', end: 'bottom top', scrub: true },
     });
@@ -262,11 +423,12 @@
     });
   }
 
-  /* ---------- Signature drinks sequence ---------- */
+  /* ---------- Signature drinks: one framed scene per drink ---------- */
   function initDrinks(mm) {
     const section = $('[data-drinks]');
     if (!section) return;
     const track = $('[data-drinks-track]', section);
+    const stage = $('[data-drinks-stage]', section);
     const items = $$('[data-drink]', section);
     const buttons = $$('[data-drink-jump]', section);
     const bar = $('[data-drinks-bar]', section);
@@ -275,72 +437,81 @@
 
     mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference)', () => {
       section.classList.add('is-sequenced');
-      let current = -1;
-      const setActive = (i) => {
-        if (i === current) return;
-        current = i;
-        items.forEach((el, k) => {
-          el.classList.toggle('is-active', k === i);
-          el.classList.toggle('is-past', k < i);
-          el.setAttribute('aria-hidden', String(k !== i));
-        });
-        buttons.forEach((b, k) => b.setAttribute('aria-current', String(k === i)));
-      };
-      setActive(0);
-
-      const st = ScrollTrigger.create({
-        trigger: track,
-        start: 'top top',
-        end: 'bottom bottom',
-        onUpdate: (self) => {
-          setActive(Math.min(n - 1, Math.floor(self.progress * n)));
-          bar.style.transform = `scaleX(${self.progress})`;
-        },
+      const { st, cleanup } = sequence({
+        track,
+        items,
+        onChange: (i) => buttons.forEach((b, k) => b.setAttribute('aria-current', String(k === i))),
       });
-
+      const progress = ScrollTrigger.create({
+        trigger: track, start: 'top top', end: 'bottom bottom',
+        onUpdate: (self) => { bar.style.transform = `scaleX(${self.progress.toFixed(4)})`; },
+      });
       const onJump = (e) => {
         const i = Number(e.currentTarget.dataset.drinkJump);
-        const y = st.start + (st.end - st.start) * ((i + 0.5) / n);
-        scrollToTarget(y);
+        scrollToTarget(st.start + (st.end - st.start) * ((i + 0.5) / n));
       };
       buttons.forEach((b) => b.addEventListener('click', onJump));
       ScrollTrigger.refresh();
-
       return () => {
         section.classList.remove('is-sequenced');
-        items.forEach((el) => { el.classList.remove('is-active', 'is-past'); el.removeAttribute('aria-hidden'); });
-        buttons.forEach((b) => b.removeEventListener('click', onJump));
+        cleanup();
+        progress.kill();
+        buttons.forEach((b) => { b.removeEventListener('click', onJump); b.removeAttribute('aria-current'); });
         bar.style.transform = '';
       };
     });
+
+    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference) and (pointer: fine)', () =>
+      studioLight(stage, { reach: 0.22, drift: 6, lerp: 0.055, lift: 1.01 }));
   }
 
-  /* ---------- Matcha ritual ---------- */
+  /* ---------- Matcha ritual: drink → product → ingredient ---------- */
   function initMatcha(mm) {
     const section = $('[data-matcha]');
     if (!section) return;
-    mm.add('(min-width: 761px) and (prefers-reduced-motion: no-preference)', () => {
+    const track = $('[data-mstory]', section);
+    const stage = $('[data-mstory-stage]', section);
+    const chapters = $$('[data-mchap]', section);
+    const index = $$('.mstory__index li', section);
+
+    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference)', () => {
       section.classList.add('is-sequenced');
-      const triggers = $$('[data-statement]', section).map((el) => ScrollTrigger.create({
-        trigger: el, start: 'top 62%', end: 'bottom 38%', toggleClass: 'is-active',
-      }));
-      const zoom = gsap.fromTo('[data-matcha-img]', { scale: 1.08 }, {
-        scale: 1, ease: 'none',
-        scrollTrigger: { trigger: section, start: 'top bottom', end: 'center center', scrub: true },
+      const { cleanup } = sequence({
+        track,
+        items: chapters,
+        onChange: (i) => {
+          stage.dataset.chapter = String(i);
+          index.forEach((li, k) => li.classList.toggle('is-active', k === i));
+        },
       });
+      ScrollTrigger.refresh();
       return () => {
         section.classList.remove('is-sequenced');
-        triggers.forEach((t) => t.kill());
-        zoom.scrollTrigger && zoom.scrollTrigger.kill();
+        cleanup();
+        delete stage.dataset.chapter;
+        index.forEach((li) => li.classList.remove('is-active'));
       };
     });
+
+    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference) and (pointer: fine)', () =>
+      studioLight(stage, { reach: 0.16, lerp: 0.035 }));
+
+    // Normal-flow fade for smaller screens.
+    if (motionOK()) {
+      root.classList.add('fade-ready');
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
+      }, { rootMargin: '0px 0px -10% 0px' });
+      $$('[data-fade]', section).forEach((el) => io.observe(el));
+    }
   }
 
   /* ---------- Boot ---------- */
+  initHeroVideo();
   initVideos();
   initMap();
 
-  if (!hasGSAP) return;
+  if (!hasGSAP) { initOverlaps(); return; }
   gsap.registerPlugin(ScrollTrigger);
   initThemes();
 
@@ -349,6 +520,7 @@
     initReveals();
     initHero();
   }
+  initOverlaps();
 
   const mm = gsap.matchMedia();
   initDrinks(mm);

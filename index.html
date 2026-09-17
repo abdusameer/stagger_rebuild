@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@500;600&family=Inter:wght@400;500&display=swap">
-  <link rel="preload" as="image" href="stagger/video/hero/macro-drink-montage-web-poster.webp">
+  <link rel="preload" as="image" href="stagger/video/hero/hero-montage-poster.webp" fetchpriority="high">
   <link rel="stylesheet" href="assets/css/site.css">
   <link rel="icon" href="stagger/images/brand/stagger-logo.png">
 </head>
@@ -58,9 +58,11 @@
 
       <figure class="hero__media" data-hero-media>
         <video class="hero__video" autoplay muted loop playsinline preload="auto"
-          poster="stagger/video/hero/macro-drink-montage-web-poster.webp" data-video
+          disablepictureinpicture disableremoteplayback
+          poster="stagger/video/hero/hero-montage-poster.webp" data-hero-video
           aria-label="Close-up footage of Stagger drinks: matcha, espresso and iced latte over ice">
-          <source src="stagger/video/hero/macro-drink-montage-web.mp4" type="video/mp4">
+          <source src="stagger/video/hero/hero-montage-720.mp4" type="video/mp4" media="(max-width: 760px)">
+          <source src="stagger/video/hero/hero-montage-1080.mp4" type="video/mp4">
         </video>
       </figure>
 
@@ -84,9 +86,9 @@
     <!-- STORY -->
     <section class="story" id="story" data-theme="milk">
       <p class="label story__label"><span class="idx">01</span> Our story</p>
-      <h2 class="display story__title" data-split>A place to <em class="serif">pause.</em> Reset. Reconnect.</h2>
+      <h2 class="display story__title" data-split data-overlap="[data-story-media]">A place to <em class="serif">pause.</em> Reset. Reconnect.</h2>
 
-      <figure class="story__media" data-reveal>
+      <figure class="story__media" data-story-media data-reveal>
         <img src="stagger/images/people/journaling-with-matcha-sunlit-table-1200.webp"
           srcset="stagger/images/people/journaling-with-matcha-sunlit-table-1200.webp 1200w, stagger/images/people/journaling-with-matcha-sunlit-table-2000.webp 2000w"
           sizes="(min-width: 1024px) 58vw, 92vw" width="1200" height="800" loading="lazy" decoding="async"
@@ -106,18 +108,26 @@
 
     <!-- SIGNATURE DRINKS -->
     <section class="drinks" id="drinks" data-theme="oat" data-drinks>
-      <header class="drinks__head">
-        <p class="label"><span class="idx">02</span> Signature menu</p>
-        <h2 class="display drinks__title" data-split>The signature <em class="serif">menu.</em></h2>
-      </header>
-
       <div class="drinks__track" data-drinks-track>
-        <div class="drinks__stage">
+        <div class="drinks__stage" data-drinks-stage>
+          <header class="drinks__head">
+            <div>
+              <p class="label"><span class="idx">02</span> Signature menu</p>
+              <h2 class="display drinks__title" data-split>The signature <em class="serif">menu.</em></h2>
+            </div>
+            <a class="link drinks__more" href="https://staggercoffee.com/pages/menu">Full menu <span aria-hidden="true">→</span></a>
+          </header>
+
           <ol class="drinks__list">
-            <li class="drink" data-drink>
+            <li class="drink" data-drink style="--tone: 146 178 70; --fit: 1">
               <figure class="drink__media">
+                <span class="drink__light" aria-hidden="true"><i></i></span>
                 <span class="drink__num" aria-hidden="true">01</span>
-                <img src="stagger/images/drinks/double-matcha-site-1000.webp" width="1000" height="1000" loading="lazy" decoding="async" alt="Double Matcha in a clear glass, topped with matcha cream and matcha powder">
+                <span class="drink__float">
+                  <img src="stagger/images/drinks/signature-double-matcha-420.webp" srcset="stagger/images/drinks/signature-double-matcha-420.webp 420w, stagger/images/drinks/signature-double-matcha-841.webp 841w"
+                    sizes="(min-width: 1024px) 34vw, 72vw" width="841" height="1156" loading="lazy" decoding="async"
+                    alt="Double Matcha in a clear glass, topped with matcha cream and a dusting of matcha powder">
+                </span>
               </figure>
               <div class="drink__copy">
                 <p class="label drink__idx">01 / 05</p>
@@ -126,10 +136,15 @@
                 <p class="drink__price">$7.75</p>
               </div>
             </li>
-            <li class="drink" data-drink>
+            <li class="drink" data-drink style="--tone: 186 142 96; --fit: .96">
               <figure class="drink__media">
+                <span class="drink__light" aria-hidden="true"><i></i></span>
                 <span class="drink__num" aria-hidden="true">02</span>
-                <img src="stagger/images/drinks/cream-top-site-1000.webp" width="1000" height="1000" loading="lazy" decoding="async" alt="Cream Top: iced americano beneath a thick layer of vanilla cream dusted with cacao">
+                <span class="drink__float">
+                  <img src="stagger/images/drinks/signature-cream-top-387.webp" srcset="stagger/images/drinks/signature-cream-top-387.webp 387w, stagger/images/drinks/signature-cream-top-775.webp 775w"
+                    sizes="(min-width: 1024px) 34vw, 72vw" width="775" height="1058" loading="lazy" decoding="async"
+                    alt="Cream Top: iced americano beneath a thick layer of vanilla cream dusted with cacao">
+                </span>
               </figure>
               <div class="drink__copy">
                 <p class="label drink__idx">02 / 05</p>
@@ -138,10 +153,15 @@
                 <p class="drink__price">$6.75</p>
               </div>
             </li>
-            <li class="drink" data-drink>
+            <li class="drink" data-drink style="--tone: 200 98 104; --fit: 1">
               <figure class="drink__media">
+                <span class="drink__light" aria-hidden="true"><i></i></span>
                 <span class="drink__num" aria-hidden="true">03</span>
-                <img src="stagger/images/drinks/strawberry-matcha-site-1000.webp" width="1000" height="1000" loading="lazy" decoding="async" alt="Strawberry Matcha layered green over red strawberry with ice">
+                <span class="drink__float">
+                  <img src="stagger/images/drinks/signature-strawberry-matcha-367.webp" srcset="stagger/images/drinks/signature-strawberry-matcha-367.webp 367w, stagger/images/drinks/signature-strawberry-matcha-734.webp 734w"
+                    sizes="(min-width: 1024px) 34vw, 72vw" width="734" height="1234" loading="lazy" decoding="async"
+                    alt="Strawberry Matcha layered green over milk and red strawberry, with ice">
+                </span>
               </figure>
               <div class="drink__copy">
                 <p class="label drink__idx">03 / 05</p>
@@ -150,10 +170,15 @@
                 <p class="drink__price">$8.00</p>
               </div>
             </li>
-            <li class="drink" data-drink>
+            <li class="drink" data-drink style="--tone: 216 142 64; --fit: .92">
               <figure class="drink__media">
+                <span class="drink__light" aria-hidden="true"><i></i></span>
                 <span class="drink__num" aria-hidden="true">04</span>
-                <img src="stagger/images/drinks/stagger-tonic-site-1000.webp" width="1000" height="1000" loading="lazy" decoding="async" alt="Stagger Tonic: espresso floating over tonic, garnished with an orange slice and mint">
+                <span class="drink__float">
+                  <img src="stagger/images/drinks/signature-stagger-tonic-192.webp" srcset="stagger/images/drinks/signature-stagger-tonic-192.webp 192w, stagger/images/drinks/signature-stagger-tonic-385.webp 385w"
+                    sizes="(min-width: 1024px) 34vw, 72vw" width="385" height="888" loading="lazy" decoding="async"
+                    alt="Stagger Tonic: espresso layered over tonic in a tall glass, garnished with orange and mint">
+                </span>
               </figure>
               <div class="drink__copy">
                 <p class="label drink__idx">04 / 05</p>
@@ -162,10 +187,15 @@
                 <p class="drink__price">$7.00</p>
               </div>
             </li>
-            <li class="drink" data-drink>
+            <li class="drink" data-drink style="--tone: 160 112 80; --fit: .8">
               <figure class="drink__media">
+                <span class="drink__light" aria-hidden="true"><i></i></span>
                 <span class="drink__num" aria-hidden="true">05</span>
-                <img src="stagger/images/drinks/donut-latte-site-1000.webp" width="1000" height="1000" loading="lazy" decoding="async" alt="Donut Latte in a Stagger ceramic mug, cream and cacao dripping down the side">
+                <span class="drink__float">
+                  <img src="stagger/images/drinks/signature-donut-latte-607.webp" srcset="stagger/images/drinks/signature-donut-latte-607.webp 607w, stagger/images/drinks/signature-donut-latte-1215.webp 1215w"
+                    sizes="(min-width: 1024px) 34vw, 72vw" width="1215" height="973" loading="lazy" decoding="async"
+                    alt="Donut Latte in a Stagger ceramic mug, cream and cacao dripping down the side onto the saucer">
+                </span>
               </figure>
               <div class="drink__copy">
                 <p class="label drink__idx">05 / 05</p>
@@ -176,74 +206,107 @@
             </li>
           </ol>
 
-          <div class="drinks__rail" data-drinks-rail>
+          <div class="drinks__rail">
             <div class="drinks__bar"><span data-drinks-bar></span></div>
             <div class="drinks__ticks">
-              <button type="button" data-drink-jump="0">Double Matcha</button>
-              <button type="button" data-drink-jump="1">Cream Top</button>
-              <button type="button" data-drink-jump="2">Strawberry Matcha</button>
-              <button type="button" data-drink-jump="3">Stagger Tonic</button>
-              <button type="button" data-drink-jump="4">Donut Latte</button>
+              <button type="button" data-drink-jump="0"><span>Double Matcha</span></button>
+              <button type="button" data-drink-jump="1"><span>Cream Top</span></button>
+              <button type="button" data-drink-jump="2"><span>Strawberry Matcha</span></button>
+              <button type="button" data-drink-jump="3"><span>Stagger Tonic</span></button>
+              <button type="button" data-drink-jump="4"><span>Donut Latte</span></button>
             </div>
           </div>
         </div>
       </div>
-
-      <p class="drinks__more"><a class="link" href="https://staggercoffee.com/pages/menu">Full menu <span aria-hidden="true">→</span></a></p>
     </section>
 
     <!-- MATCHA RITUAL -->
     <section class="matcha" id="matcha" data-theme="night" data-matcha>
-      <div class="matcha__grid">
-        <figure class="matcha__sticky">
-          <img src="stagger/images/hero/matcha-cup-isolated-black-background-900.webp"
-            srcset="stagger/images/hero/matcha-cup-isolated-black-background-900.webp 900w, stagger/images/hero/matcha-cup-isolated-black-background-1500.webp 1500w"
-            sizes="(min-width: 1024px) 46vw, 88vw" width="900" height="1350" loading="lazy" decoding="async" data-matcha-img
-            alt="An iced matcha latte in a Stagger cup sleeve, lit against black">
-        </figure>
+      <div class="mstory" data-mstory>
+        <div class="mstory__stage" data-mstory-stage>
+          <span class="mstory__light" aria-hidden="true"><i></i></span>
 
-        <div class="matcha__content">
-          <header class="matcha__head">
-            <p class="label"><span class="idx">03</span> Matcha ritual</p>
-            <h2 class="display matcha__title" data-split>Your daily ritual <em class="serif">starts here.</em></h2>
-          </header>
+          <article class="mchap mchap--ritual" data-mchap>
+            <div class="mchap__copy">
+              <p class="label"><span class="idx">03</span> Matcha ritual</p>
+              <h2 class="display matcha__title" data-split>Your daily ritual <em class="serif">starts here.</em></h2>
+            </div>
+            <figure class="mchap__media" data-fade>
+              <img src="stagger/images/matcha/campaign-drink-640.webp"
+                srcset="stagger/images/matcha/campaign-drink-640.webp 640w, stagger/images/matcha/campaign-drink-1024.webp 1024w"
+                sizes="(min-width: 1024px) 40vw, 88vw" width="1024" height="1536" loading="lazy" decoding="async"
+                alt="An iced Stagger matcha latte in a cream Stagger sleeve, lit against a dark surface">
+            </figure>
+          </article>
 
-          <ol class="statements">
-            <li class="statement" data-statement>
-              <p class="label statement__n">i — Origin</p>
-              <h3 class="statement__t">Uji &amp; Kagoshima.</h3>
-              <p class="statement__b">A signature blend from two regions of Japan celebrated for producing the finest green tea in the world.</p>
-            </li>
-            <li class="statement" data-statement>
-              <p class="label statement__n">ii — Harvest</p>
-              <h3 class="statement__t">First harvest, hand-picked.</h3>
-              <p class="statement__b">When the tea plants offer their most vibrant color, smoothest texture, and naturally sweet flavor.</p>
-            </li>
-            <li class="statement" data-statement>
-              <p class="label statement__n">iii — Craft</p>
-              <h3 class="statement__t">Stone-ground.</h3>
-              <p class="statement__b">100% certified organic premium leaves. Deep umami meets smooth sweetness and subtle nuttiness.</p>
-            </li>
+          <article class="mchap mchap--origin" data-mchap>
+            <div class="mchap__copy">
+              <p class="label mchap__n">i — Origin</p>
+              <h3 class="mchap__t">Uji &amp; Kagoshima.</h3>
+              <p class="mchap__b">A signature blend from two regions of Japan celebrated for producing the finest green tea in the world.</p>
+            </div>
+            <figure class="mchap__media" data-fade>
+              <img src="stagger/images/matcha/campaign-tin-open-800.webp"
+                srcset="stagger/images/matcha/campaign-tin-open-800.webp 800w, stagger/images/matcha/campaign-tin-open-1338.webp 1338w"
+                sizes="(min-width: 1024px) 50vw, 92vw" width="1338" height="1176" loading="lazy" decoding="async"
+                alt="An open Stagger matcha tin beside its lid, piled with bright green matcha powder">
+            </figure>
+          </article>
+
+          <article class="mchap mchap--ingredient" data-mchap>
+            <div class="mchap__copy">
+              <p class="label mchap__n">ii — Craft</p>
+              <h3 class="mchap__t">Stone-ground.</h3>
+              <p class="mchap__b">100% certified organic premium leaves.</p>
+            </div>
+            <figure class="mchap__media" data-fade>
+              <img src="stagger/images/matcha/campaign-tin-spill-800.webp"
+                srcset="stagger/images/matcha/campaign-tin-spill-800.webp 800w, stagger/images/matcha/campaign-tin-spill-1309.webp 1309w"
+                sizes="(min-width: 1024px) 58vw, 100vw" width="1309" height="1201" loading="lazy" decoding="async"
+                alt="A Stagger matcha tin tipped on its side, fine matcha powder spilling across a dark surface">
+            </figure>
+          </article>
+
+          <ol class="mstory__index" aria-hidden="true">
+            <li>The ritual</li><li>The product</li><li>The ingredient</li>
           </ol>
         </div>
       </div>
 
-      <div class="matcha__pair">
-        <figure class="matcha__wide" data-reveal>
-          <img src="stagger/images/matcha/matcha-latte-and-tin-sunlit-table-1200.webp"
-            srcset="stagger/images/matcha/matcha-latte-and-tin-sunlit-table-1200.webp 1200w, stagger/images/matcha/matcha-latte-and-tin-sunlit-table-2000.webp 2000w"
-            sizes="(min-width: 1024px) 56vw, 92vw" width="1200" height="800" loading="lazy" decoding="async"
-            alt="A Stagger matcha latte beside an open tin of Premium First Harvest ceremonial matcha and a pile of powder">
-        </figure>
-        <figure class="matcha__tall" data-reveal>
-          <img src="stagger/images/matcha/matcha-tools-on-stagger-box-1000.webp" width="1000" height="1328" loading="lazy" decoding="async"
-            alt="Ceramic matcha bowl, whisk holder, bamboo whisk and scoop on a steel tray resting on a Stagger box">
-        </figure>
-        <div class="matcha__shop" data-reveal>
+      <div class="mshop">
+        <div class="mshop__lead" data-reveal>
           <p class="label">From the shop</p>
-          <p class="matcha__product">Organic Ceremonial Matcha <span>(30g)</span></p>
-          <p class="matcha__price">$35.00</p>
-          <a class="link" href="https://staggercoffee.com/products/stagger-organic-ceremonial-matcha-30g">Shop matcha <span aria-hidden="true">→</span></a>
+          <h3 class="mshop__name">Organic Ceremonial Matcha <span>(30g)</span></h3>
+          <p class="mshop__note">Hand-picked from the first harvest. Stone-ground. 100% certified organic.</p>
+          <p class="mshop__price">$35.00</p>
+          <a class="btn" href="https://staggercoffee.com/products/stagger-organic-ceremonial-matcha-30g">Shop matcha</a>
+        </div>
+
+        <div class="mshop__tools">
+          <p class="label mshop__tools-label" data-reveal>Complete the ritual</p>
+          <ul>
+            <li data-reveal>
+              <a href="https://staggercoffee.com/products/bamboo-matcha-whisk-chasen">
+                <figure><img src="stagger/images/matcha/bamboo-whisk-chasen-1-800.webp" width="800" height="1200" loading="lazy" decoding="async" alt="Black Stagger matcha whisk tube on a steel surface"></figure>
+                <span class="mshop__tool">Bamboo Matcha Whisk (Chasen)</span>
+                <span class="mshop__tool-price">$25.00</span>
+              </a>
+            </li>
+            <li data-reveal>
+              <a href="https://staggercoffee.com/products/bamboo-matcha-scoop-chashaku">
+                <figure><img src="stagger/images/matcha/bamboo-scoop-chashaku-1-800.webp" width="800" height="1200" loading="lazy" decoding="async" alt="Stagger matcha tins, whisk tube and a boxed bamboo scoop on a black stool"></figure>
+                <span class="mshop__tool">Bamboo Matcha Scoop (Chashaku)</span>
+                <span class="mshop__tool-price">$5.00</span>
+              </a>
+            </li>
+            <li data-reveal>
+              <a href="https://staggercoffee.com/products/ceramic-matcha-bowl-set-1">
+                <figure><img src="stagger/images/matcha/ceramic-bowl-set-4-800.webp" width="800" height="1200" loading="lazy" decoding="async" alt="Open black Stagger matcha bowl set box printed Your daily ritual starts here"></figure>
+                <span class="mshop__tool">Ceramic Matcha Bowl Set</span>
+                <span class="mshop__tool-price">$45.00</span>
+              </a>
+            </li>
+          </ul>
         </div>
       </div>
     </section>
