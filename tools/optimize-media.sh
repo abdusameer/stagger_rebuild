@@ -86,25 +86,27 @@ for w in 1200 2000; do webp "$M/images/products/pastry-and-drink-flatlay-black-t
 webp "$M/images/lifestyle/red-green-drink-blue-sky.jpg" 1000
 webp "$M/images/interior/two-drinks-black-table-interior.jpg" 1000
 
-# Hero video: top-down matcha (portrait master) cropped square around the glass, which also drops the
-# generator mark in the bottom corner. Short GOP so scroll-scrubbing seeks cheaply.
-HERO="$M/video/hero/vidu-video-3471260911613331.mp4"
-SCRUB="-an -c:v libx264 -preset slow -pix_fmt yuv420p -sc_threshold 0 -bf 0 -movflags +faststart"
-ffmpeg -v error -y -i "$HERO" -vf "crop=1080:1080:0:400" $SCRUB -crf 21 -g 2 -keyint_min 2 "$M/video/hero/matcha-topdown-1080.mp4"
-ffmpeg -v error -y -i "$HERO" -vf "crop=1080:1080:0:400,scale=720:720:flags=lanczos" $SCRUB -crf 22 -g 2 -keyint_min 2 "$M/video/hero/matcha-topdown-720.mp4"
-ffmpeg -v error -y -i "$M/video/hero/matcha-topdown-1080.mp4" -frames:v 1 -q:v 2 /tmp/stagger-hero-poster.jpg
-cwebp -quiet -q 82 -sharp_yuv /tmp/stagger-hero-poster.jpg -o "$M/video/hero/matcha-topdown-poster.webp" && rm /tmp/stagger-hero-poster.jpg
+# Hero: enhanced top-down matcha (2160² 60fps master, already framed on the glass). The loop file
+# cross-fades the last 0.7s into the first 0.7s so forward playback never seams.
+HERO="$M/video/hero/matcha-topdown-enhanced-master.mp4"
+PLAY="-an -c:v libx264 -preset slow -pix_fmt yuv420p -movflags +faststart"
+LOOP="[0:v]split[a][b];[a]trim=0.7:4.1,setpts=PTS-STARTPTS[s];[b]trim=0:0.7,setpts=PTS-STARTPTS[e];[s][e]xfade=transition=fade:duration=0.7:offset=2.7,split[o1][o2];[o1]scale=1080:1080:flags=lanczos[h];[o2]scale=720:720:flags=lanczos[m]"
+ffmpeg -v error -y -i "$HERO" -filter_complex "$LOOP" -map "[h]" $PLAY -crf 22 -g 30 "$M/video/hero/matcha-loop-1080.mp4" -map "[m]" $PLAY -crf 23 -g 30 "$M/video/hero/matcha-loop-720.mp4"
+ffmpeg -v error -y -i "$M/video/hero/matcha-loop-1080.mp4" -frames:v 1 -q:v 2 /tmp/stagger-hero-poster.jpg
+cwebp -quiet -q 82 -sharp_yuv /tmp/stagger-hero-poster.jpg -o "$M/video/hero/matcha-loop-poster.webp" && rm /tmp/stagger-hero-poster.jpg
 
-# Coffee film: frames 119–132 (a second bean morphs in) are cut, so the bean lands in one clean edit.
-COFFEE="$M/video/Staggercoffee.mp4"
-mkdir -p "$M/video/coffee"
-ffmpeg -v error -y -i "$COFFEE" -filter_complex \
-  "[0:v]trim=start_frame=0:end_frame=119,setpts=PTS-STARTPTS[a];[0:v]trim=start_frame=133:end_frame=240,setpts=PTS-STARTPTS[b];[a][b]concat=n=2:v=1[c]" \
-  -map "[c]" $SCRUB -crf 21 -g 4 -keyint_min 4 "$M/video/coffee/bean-story-1280.mp4"
-for pair in "0:poster:80" "7.9:macro:82"; do
-  IFS=: read -r at name q <<< "$pair"
-  ffmpeg -v error -y -ss "$at" -i "$M/video/coffee/bean-story-1280.mp4" -frames:v 1 -q:v 2 /tmp/stagger-coffee.jpg
-  cwebp -quiet -q "$q" -sharp_yuv /tmp/stagger-coffee.jpg -o "$M/video/coffee/bean-story-$name.webp"
+# Coffee: enhanced film (2160² master with the 16:9 picture letterboxed at y=472). Same edit as before.
+# Desktop gets 1920×1080 (keyframe every 3 frames); phones get a centred portrait cut, all keyframes,
+# so every scroll seek on iOS is a single-frame decode.
+COFFEE="$M/video/coffee/bean-story-enhanced-master.mp4"
+SCRUB="-an -c:v libx264 -preset slow -pix_fmt yuv420p -sc_threshold 0 -bf 0 -movflags +faststart"
+ffmpeg -v error -y -i "$COFFEE" -vf "crop=2160:1216:0:472,fps=30,scale=1920:1080:flags=lanczos" $SCRUB -crf 25 -g 3 -keyint_min 3 "$M/video/coffee/bean-story-1920.mp4"
+ffmpeg -v error -y -i "$COFFEE" -vf "crop=684:1216:738:472,fps=30,scale=608:1080:flags=lanczos" $SCRUB -crf 23 -g 1 -keyint_min 1 "$M/video/coffee/bean-story-portrait.mp4"
+for kind in 1920 portrait; do
+  ffmpeg -v error -y -i "$M/video/coffee/bean-story-$kind.mp4" -frames:v 1 -q:v 2 /tmp/stagger-coffee.jpg
+  cwebp -quiet -q 80 -sharp_yuv /tmp/stagger-coffee.jpg -o "$M/video/coffee/bean-story-poster-$kind.webp"
+  ffmpeg -v error -y -ss 7.95 -i "$M/video/coffee/bean-story-$kind.mp4" -frames:v 1 -q:v 2 /tmp/stagger-coffee.jpg
+  cwebp -quiet -q 82 -sharp_yuv /tmp/stagger-coffee.jpg -o "$M/video/coffee/bean-story-macro-$kind.webp"
 done
 rm -f /tmp/stagger-coffee.jpg
 

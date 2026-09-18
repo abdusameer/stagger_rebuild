@@ -86,10 +86,12 @@
   /* ---------- Scrubbed footage: scroll sets a target, the frame eases toward it ---------- */
   const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 
-  // Seeks are coalesced: one currentTime write per frame, never while a seek is in flight.
+  // Seeks are coalesced: one currentTime write per frame, never while a seek is in flight,
+  // and never before the metadata (duration) exists.
   function scrubber(video, { stiffness = 5, onFrame } = {}) {
-    let target = 0, cur = 0, raf = 0, last = 0, ready = false;
-    const frame = 1 / 48;
+    let target = 0, cur = 0, raf = 0, last = 0;
+    const frame = 1 / 60;
+    const ready = () => video.readyState >= 1 && isFinite(video.duration) && video.duration > 0;
     const tick = (now) => {
       const dt = Math.min(0.064, last ? (now - last) / 1000 : 0.016);
       last = now;
@@ -97,7 +99,7 @@
       if (Math.abs(target - cur) < 0.0004) cur = target;
       const t = onFrame ? onFrame(cur) : null;
       let pending = false;
-      if (ready && t != null && isFinite(video.duration)) {
+      if (t != null && ready()) {
         const want = clamp(t, 0, video.duration - 0.04);
         if (Math.abs(video.currentTime - want) > frame) {
           if (!video.seeking) video.currentTime = want;
@@ -108,61 +110,79 @@
       if (!raf) last = 0;
     };
     const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
-    // iOS only decodes after a play(): start and immediately pause, then we own the clock.
-    const prime = () => {
-      if (ready) return;
-      const done = () => { video.pause(); ready = true; video.dispatchEvent(new Event('scrubready')); kick(); };
-      const p = video.play();
-      if (p && p.then) p.then(done, () => {}); else done();
-    };
-    if (video.readyState >= 1) prime(); else video.addEventListener('loadedmetadata', prime, { once: true });
-    const unlock = () => { prime(); ['pointerdown', 'touchstart', 'keydown'].forEach((t) => removeEventListener(t, unlock)); };
-    ['pointerdown', 'touchstart', 'keydown'].forEach((t) => addEventListener(t, unlock, { passive: true }));
+    const onReady = () => { video.dispatchEvent(new Event('scrubready')); kick(); };
+    if (ready()) onReady(); else video.addEventListener('loadedmetadata', onReady, { once: true });
+    video.addEventListener('seeked', kick);
     return {
       set(v) { if (v === target) return; target = v; kick(); },
-      jump(v) { target = cur = v; kick(); },
       get value() { return cur; },
       stop() { cancelAnimationFrame(raf); raf = 0; },
     };
   }
 
-  // Scrubbed films are held in memory: seeking then never waits on the network or on range support.
-  async function attachFilm(video) {
+  // Picks the <source> whose media query matches and assigns it directly. GitHub Pages serves
+  // byte ranges, so seeking works without holding the file in memory (safer on iOS).
+  function attachFilm(video, url) {
     const sources = $$('source', video);
     const pick = sources.find((el) => !el.media || matchMedia(el.media).matches) || sources[0];
-    if (!pick) return;
-    const url = pick.dataset.src || pick.getAttribute('src');
+    url = url || (pick && (pick.dataset.src || pick.getAttribute('src')));
     sources.forEach((el) => el.remove());
+    if (!url) return;
+    video.muted = true;
+    video.setAttribute('muted', '');
+    video.setAttribute('playsinline', '');
     video.preload = 'auto';
-    try {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(res.status);
-      video.src = URL.createObjectURL(await res.blob());
-    } catch { video.src = url; }
+    video.src = url;
     video.load();
   }
 
-  /* ---------- Hero: the matcha moves only as far as you scroll ---------- */
+  /* ---------- Hero: one motion system — slow idle drift plus scroll momentum ---------- */
+  // The loop file is cross-faded end-to-start, so playback always moves forward and never seams.
+  // Scroll speed raises the playback rate; damping carries it back down to the idle rate.
   function initHeroVideo() {
     const video = $('[data-hero-video]');
     const hero = $('[data-hero]');
     if (!video || !heroMedia || !hero) return;
-    if (!motionOK()) return;
     attachFilm(video);
+    const IDLE = 0.32, MAX = 1.35;
+    let rate = IDLE, boost = 0, lastY = scrollY, lastT = 0, raf = 0, visible = true;
     let heroH = hero.offsetHeight;
-    const lead = 0.3; // the ice settles a little as the page opens
-    const s = scrubber(video, {
-      stiffness: 3.2,
-      onFrame: (p) => {
-        video.style.transform = `scale(${(1 + 0.03 * p).toFixed(4)})`;
-        return lead + p * (video.duration - lead - 0.05);
-      },
-    });
-    video.addEventListener('scrubready', () => heroMedia.classList.add('is-playing'));
-    const update = () => s.set(clamp(scrollY / heroH));
-    addEventListener('scroll', update, { passive: true });
-    addEventListener('resize', () => { heroH = hero.offsetHeight; update(); }, { passive: true });
-    update();
+
+    const play = () => {
+      if (!visible || document.hidden) return;
+      const p = video.play();
+      if (p && p.catch) p.catch(() => {});
+    };
+    video.addEventListener('playing', () => heroMedia.classList.add('is-playing'));
+    video.addEventListener('loadeddata', () => { video.playbackRate = rate; play(); });
+    // Low Power Mode blocks autoplay until a real tap; the poster holds until then.
+    const unlock = () => { play(); if (!video.paused) ['touchend', 'click', 'keydown'].forEach((t) => removeEventListener(t, unlock)); };
+    ['touchend', 'click', 'keydown'].forEach((t) => addEventListener(t, unlock, { passive: true }));
+
+    const tick = (now) => {
+      const dt = Math.min(0.1, lastT ? (now - lastT) / 1000 : 0.016);
+      lastT = now;
+      const y = scrollY;
+      const v = Math.abs(y - lastY) / dt; // px per second
+      lastY = y;
+      // Momentum: velocity pushes the boost up quickly, then it decays slowly back to idle.
+      const want = motionOK() ? Math.min(1, v / 1600) : 0;
+      boost += (want - boost) * (1 - Math.exp(-dt * (want > boost ? 5 : 1.1)));
+      const target = IDLE + (MAX - IDLE) * boost;
+      rate += (target - rate) * (1 - Math.exp(-dt * 3));
+      if (Math.abs(video.playbackRate - rate) > 0.008 && video.readyState >= 2) video.playbackRate = rate;
+      if (motionOK()) video.style.transform = `scale(${(1 + 0.03 * clamp(y / heroH)).toFixed(4)})`;
+      raf = visible && !document.hidden ? requestAnimationFrame(tick) : 0;
+      if (!raf) lastT = 0;
+    };
+    const start = () => { if (!raf) raf = requestAnimationFrame(tick); play(); };
+    new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting;
+      if (visible) start(); else video.pause();
+    }, { rootMargin: '10% 0px' }).observe(hero);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) video.pause(); else start(); });
+    addEventListener('resize', () => { heroH = hero.offsetHeight; }, { passive: true });
+    start();
   }
 
   /* ---------- Video: play only when visible ---------- */
@@ -338,6 +358,32 @@
     };
   }
 
+  /* ---------- Scroll conductor: progress of a tall track, independent of any library ---------- */
+  const watchers = new Set();
+  let watchRaf = 0;
+  function runWatchers() {
+    watchRaf = 0;
+    const vh = innerHeight;
+    const reads = [...watchers].map((w) => {
+      const r = w.track.getBoundingClientRect();
+      return [w, clamp(-r.top / Math.max(1, r.height - vh))];
+    });
+    reads.forEach(([w, p]) => { if (p !== w.p) { w.p = p; w.cb(p); } });
+  }
+  const requestWatch = () => { if (!watchRaf) watchRaf = requestAnimationFrame(runWatchers); };
+  addEventListener('scroll', requestWatch, { passive: true });
+  addEventListener('resize', () => { watchers.forEach((w) => { w.p = -1; }); requestWatch(); }, { passive: true });
+  function watch(track, cb) {
+    const w = { track, cb, p: -1 };
+    watchers.add(w);
+    requestWatch();
+    return {
+      get start() { return track.getBoundingClientRect().top + scrollY; },
+      get end() { return track.getBoundingClientRect().top + scrollY + track.offsetHeight - innerHeight; },
+      kill() { watchers.delete(w); },
+    };
+  }
+
   /* ---------- Scroll sequence: one active chapter at a time ---------- */
   function sequence({ track, items, onChange }) {
     const n = items.length;
@@ -353,16 +399,11 @@
       onChange && onChange(i);
     };
     setActive(0);
-    const st = ScrollTrigger.create({
-      trigger: track,
-      start: 'top top',
-      end: 'bottom bottom',
-      onUpdate: (self) => {
-        const x = self.progress * n;
-        const i = Math.min(n - 1, Math.floor(x));
-        setActive(i);
-        track.style.setProperty('--cp', clamp(x - i).toFixed(3));
-      },
+    const st = watch(track, (p) => {
+      const x = p * n;
+      const i = Math.min(n - 1, Math.floor(x));
+      setActive(i);
+      track.style.setProperty('--cp', clamp(x - i).toFixed(3));
     });
     const cleanup = () => {
       st.kill();
@@ -497,23 +538,20 @@
     const n = items.length;
     section.style.setProperty('--n', n);
 
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
+    // The stages are structural, not decorative: they run on every device, touch included.
+    (() => {
       section.classList.add('is-sequenced');
       const { st, cleanup } = sequence({
         track,
         items,
         onChange: (i) => buttons.forEach((b, k) => b.setAttribute('aria-current', String(k === i))),
       });
-      const progress = ScrollTrigger.create({
-        trigger: track, start: 'top top', end: 'bottom bottom',
-        onUpdate: (self) => { bar.style.transform = `scaleX(${self.progress.toFixed(4)})`; },
-      });
+      const progress = watch(track, (p) => { bar.style.transform = `scaleX(${p.toFixed(4)})`; });
       const onJump = (e) => {
         const i = Number(e.currentTarget.dataset.drinkJump);
         scrollToTarget(st.start + (st.end - st.start) * ((i + 0.5) / n));
       };
       buttons.forEach((b) => b.addEventListener('click', onJump));
-      ScrollTrigger.refresh();
       return () => {
         section.classList.remove('is-sequenced');
         cleanup();
@@ -521,9 +559,9 @@
         buttons.forEach((b) => { b.removeEventListener('click', onJump); b.removeAttribute('aria-current'); });
         bar.style.transform = '';
       };
-    });
+    })();
 
-    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference) and (pointer: fine)', () =>
+    mm && mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference) and (pointer: fine)', () =>
       studioLight(stage, { reach: 0.22, drift: 6, lerp: 0.055, lift: 1.01 }));
   }
 
@@ -536,7 +574,8 @@
     const chapters = $$('[data-mchap]', section);
     const index = $$('.mstory__index li', section);
 
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
+    // The stages are structural, not decorative: they run on every device, touch included.
+    (() => {
       section.classList.add('is-sequenced');
       const { cleanup } = sequence({
         track,
@@ -546,16 +585,15 @@
           index.forEach((li, k) => li.classList.toggle('is-active', k === i));
         },
       });
-      ScrollTrigger.refresh();
       return () => {
         section.classList.remove('is-sequenced');
         cleanup();
         delete stage.dataset.chapter;
         index.forEach((li) => li.classList.remove('is-active'));
       };
-    });
+    })();
 
-    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference) and (pointer: fine)', () =>
+    mm && mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference) and (pointer: fine)', () =>
       studioLight(stage, { reach: 0.16, lerp: 0.035 }));
 
   }
@@ -580,7 +618,8 @@
     const stepName = $('[data-mshop-name]', section);
     const names = objects.map((o) => o.querySelector('.mobj__name').textContent.trim());
 
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
+    // The stages are structural, not decorative: they run on every device, touch included.
+    (() => {
       section.classList.add('is-sequenced');
       let current = -1;
       const setActive = (i) => {
@@ -595,17 +634,13 @@
         stepName.textContent = names[i];
       };
       setActive(0);
-      const st = ScrollTrigger.create({
-        trigger: track, start: 'top top', end: 'bottom bottom',
-        onUpdate: (self) => setActive(Math.min(objects.length - 1, Math.floor(self.progress * objects.length))),
-      });
-      ScrollTrigger.refresh();
+      const st = watch(track, (p) => setActive(Math.min(objects.length - 1, Math.floor(p * objects.length))));
       return () => {
         section.classList.remove('is-sequenced');
         st.kill();
         objects.forEach((el) => el.classList.remove('is-in', 'is-active'));
       };
-    });
+    })();
   }
 
   /* ---------- Coffee: one film, seven beats ---------- */
@@ -635,7 +670,8 @@
     const meter = $('[data-cmeter]', section);
     const count = $('[data-ccount]', section);
 
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
+    // The stages are structural, not decorative: they run on every device, touch included.
+    (() => {
       section.classList.add('is-sequenced');
       let beat = -1, s = null;
       const setBeat = (i) => {
@@ -673,18 +709,25 @@
       const load = () => {
         if (video.dataset.loaded) return;
         video.dataset.loaded = '1';
-        attachFilm(video);
+        // Phones get a portrait cut of the film (sharper, same centre) with matching stills.
+        const portrait = matchMedia('(max-aspect-ratio: 9/16)').matches;
+        const kind = portrait ? 'portrait' : '1920';
+        const base = 'stagger/video/coffee/bean-story-';
+        video.poster = `${base}poster-${kind}.webp`;
+        film.style.backgroundImage = `url("${base}poster-${kind}.webp")`;
+        $('.cfilm__macro', film).src = `${base}macro-${kind}.webp`;
+        attachFilm(video, `${base}${kind}.mp4`);
+        const shown = () => film.classList.add('is-ready');
+        video.addEventListener('loadeddata', shown, { once: true });
+        video.addEventListener('seeked', shown, { once: true });
         s = scrubber(video, { stiffness: 4.2, onFrame: render });
-        video.addEventListener('scrubready', () => film.classList.add('is-ready'), { once: true });
+        s.set(last);
       };
       const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { load(); io.disconnect(); } }, { rootMargin: '150% 0px' });
       io.observe(section);
 
-      const st = ScrollTrigger.create({
-        trigger: track, start: 'top top', end: 'bottom bottom',
-        onUpdate: (self) => { if (s) s.set(self.progress); else render(self.progress); },
-      });
-      ScrollTrigger.refresh();
+      let last = 0;
+      const st = watch(track, (p) => { last = p; if (s) s.set(p); else render(p); });
       return () => {
         section.classList.remove('is-sequenced');
         st.kill(); io.disconnect();
@@ -694,7 +737,7 @@
         stage.classList.remove('is-revealing', 'has-prod', 'is-dark');
         ['--reveal', '--push', '--prod'].forEach((v) => stage.style.removeProperty(v));
       };
-    });
+    })();
   }
 
   /* ---------- Press: expand the verified features ---------- */
@@ -760,31 +803,31 @@
   }
 
   /* ---------- Boot ---------- */
+  // Core storytelling first: it needs no animation library, so a blocked CDN or a phone
+  // with Reduce Motion on still gets the sticky stages and the films.
+  const mm = hasGSAP ? gsap.matchMedia() : null;
   initHeroVideo();
   initVideos();
   initMap();
+  initDrinks(mm);
+  initMatcha(mm);
+  initShop(mm);
+  initCoffee(mm);
+  initHeroStage(mm);
+  initFades();
+  initPress();
 
   if (!hasGSAP) { initOverlaps(); return; }
   gsap.registerPlugin(ScrollTrigger);
   initThemes();
-
   if (motionOK()) {
     initLenis();
     initReveals();
     initHero();
   }
   initOverlaps();
-
-  const mm = gsap.matchMedia();
-  initHeroStage(mm);
-  initDrinks(mm);
-  initMatcha(mm);
-  initShop(mm);
-  initCoffee(mm);
   initDepth(mm);
-  initFades();
-  initPress();
 
-  addEventListener('load', () => { measureSplit(); ScrollTrigger.refresh(); });
-  document.fonts && document.fonts.ready.then(() => ScrollTrigger.refresh());
+  addEventListener('load', () => { measureSplit(); ScrollTrigger.refresh(); requestWatch(); });
+  document.fonts && document.fonts.ready.then(() => { ScrollTrigger.refresh(); requestWatch(); });
 })();

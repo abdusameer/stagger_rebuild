@@ -282,7 +282,7 @@ body[data-theme="night"] .nav__logo img,
   position: absolute; inset: 0;
   border-radius: 50%;
   overflow: hidden;
-  background: #2b2d2f url("../../stagger/video/hero/matcha-topdown-poster.webp") 50% 50% / cover no-repeat;
+  background: #2b2d2f url("../../stagger/video/hero/matcha-loop-poster.webp") 50% 50% / cover no-repeat;
 }
 /* A little depth at the edge, as if the circle were the glass itself. */
 .hero__disc::after {
@@ -333,7 +333,9 @@ body[data-theme="night"] .nav__logo img,
   pointer-events: none;
 }
 .ttl {
-  display: block;
+  /* flow-root on both copies, so the first line's negative margin can't collapse through one
+     layer and not the other — the bone copy must sit in exact register with the ink copy. */
+  display: flow-root;
   font-family: var(--f-display);
   font-weight: 600;
   letter-spacing: -.05em;
@@ -341,8 +343,8 @@ body[data-theme="night"] .nav__logo img,
 }
 .ttl--light {
   position: absolute; inset: 0;
-  /* Over the matcha the letters deepen to a dark tea green rather than flip to light. */
-  color: #1f2c08;
+  /* Where the headline crosses the matcha it turns warm bone, clipped exactly to the circle. */
+  color: var(--milk);
   clip-path: inset(0 0 0 var(--split, 100%));
 }
 .hl { display: block; overflow: hidden; padding: .1em 0 .14em; margin: -.1em 0 -.14em; }
@@ -780,7 +782,7 @@ body[data-theme="night"] .nav__logo img,
 }
 .coffee.is-sequenced .cfilm {
   position: absolute; inset: 0; aspect-ratio: auto;
-  background: #e2d6c1 url("../../stagger/video/coffee/bean-story-poster.webp") 50% 50% / cover no-repeat;
+  background: #e2d6c1 url("../../stagger/video/coffee/bean-story-poster-1920.webp") 50% 50% / cover no-repeat;
   opacity: calc(1 - var(--prod) * .92);
 }
 .coffee.is-sequenced .cfilm__video {
@@ -1177,7 +1179,7 @@ body[data-theme="night"] .nav__logo img,
     margin: 0;
   }
   .hero__title { grid-row: 2; align-self: end; margin: 0; font-size: clamp(54px, 17.4vw, 96px); }
-  .ttl--light { display: block; }
+  .ttl--light { display: flow-root; }
   .hero__lede { grid-row: 3; grid-column: 1 / 11; margin-top: 22px; font-size: 17px; position: relative; z-index: 3; }
   .hero__actions { grid-row: 4; grid-column: 1 / 13; margin-top: 18px; position: relative; z-index: 3; }
 
@@ -1364,6 +1366,8 @@ body[data-theme="night"] .nav__logo img,
   .coffee.is-sequenced .cstory__count { bottom: 40px; }
 }
 
+/* Reduce Motion: no looping decoration or smooth scrolling. Crossfades between chapters stay,
+   because the sticky stages are how the content is laid out, not an effect. */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
