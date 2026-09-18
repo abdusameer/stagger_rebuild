@@ -282,7 +282,7 @@ body[data-theme="night"] .nav__logo img,
   position: absolute; inset: 0;
   border-radius: 50%;
   overflow: hidden;
-  background: #2b2d2f url("../../stagger/video/hero/matcha-loop-poster.webp") 50% 50% / cover no-repeat;
+  background: #2b2d2f url("../../stagger/video/hero/matcha-scrub-poster.webp") 50% 50% / cover no-repeat;
 }
 /* A little depth at the edge, as if the circle were the glass itself. */
 .hero__disc::after {

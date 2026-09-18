@@ -86,14 +86,14 @@ for w in 1200 2000; do webp "$M/images/products/pastry-and-drink-flatlay-black-t
 webp "$M/images/lifestyle/red-green-drink-blue-sky.jpg" 1000
 webp "$M/images/interior/two-drinks-black-table-interior.jpg" 1000
 
-# Hero: enhanced top-down matcha (2160² 60fps master, already framed on the glass). The loop file
-# cross-fades the last 0.7s into the first 0.7s so forward playback never seams.
+# Hero: enhanced top-down matcha (2160² 60fps master, already framed on the glass), scrubbed by scroll.
+# Short GOP for 1080, all keyframes for 720 so every seek on a phone is one frame decode.
 HERO="$M/video/hero/matcha-topdown-enhanced-master.mp4"
-PLAY="-an -c:v libx264 -preset slow -pix_fmt yuv420p -movflags +faststart"
-LOOP="[0:v]split[a][b];[a]trim=0.7:4.1,setpts=PTS-STARTPTS[s];[b]trim=0:0.7,setpts=PTS-STARTPTS[e];[s][e]xfade=transition=fade:duration=0.7:offset=2.7,split[o1][o2];[o1]scale=1080:1080:flags=lanczos[h];[o2]scale=720:720:flags=lanczos[m]"
-ffmpeg -v error -y -i "$HERO" -filter_complex "$LOOP" -map "[h]" $PLAY -crf 22 -g 30 "$M/video/hero/matcha-loop-1080.mp4" -map "[m]" $PLAY -crf 23 -g 30 "$M/video/hero/matcha-loop-720.mp4"
-ffmpeg -v error -y -i "$M/video/hero/matcha-loop-1080.mp4" -frames:v 1 -q:v 2 /tmp/stagger-hero-poster.jpg
-cwebp -quiet -q 82 -sharp_yuv /tmp/stagger-hero-poster.jpg -o "$M/video/hero/matcha-loop-poster.webp" && rm /tmp/stagger-hero-poster.jpg
+SCRUB="-an -c:v libx264 -preset slow -pix_fmt yuv420p -sc_threshold 0 -bf 0 -movflags +faststart"
+ffmpeg -v error -y -i "$HERO" -vf "fps=30,scale=1080:1080:flags=lanczos" $SCRUB -crf 22 -g 2 -keyint_min 2 "$M/video/hero/matcha-scrub-1080.mp4"
+ffmpeg -v error -y -i "$HERO" -vf "fps=30,scale=720:720:flags=lanczos" $SCRUB -crf 23 -g 1 -keyint_min 1 "$M/video/hero/matcha-scrub-720.mp4"
+ffmpeg -v error -y -i "$M/video/hero/matcha-scrub-1080.mp4" -frames:v 1 -q:v 2 /tmp/stagger-hero-poster.jpg
+cwebp -quiet -q 82 -sharp_yuv /tmp/stagger-hero-poster.jpg -o "$M/video/hero/matcha-scrub-poster.webp" && rm /tmp/stagger-hero-poster.jpg
 
 # Coffee: enhanced film (2160² master with the 16:9 picture letterboxed at y=472). Same edit as before.
 # Desktop gets 1920×1080 (keyframe every 3 frames); phones get a centred portrait cut, all keyframes,
