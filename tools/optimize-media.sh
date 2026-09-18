@@ -110,6 +110,15 @@ for kind in 1920 portrait; do
 done
 rm -f /tmp/stagger-coffee.jpg
 
+# Phone scrubbers: stills drawn to a canvas (iOS won't paint seeks on an unplayed video).
+mkdir -p "$M/video/hero/frames" "$M/video/coffee/frames"
+T=$(mktemp -d)
+ffmpeg -v error -y -i "$HERO" -vf "fps=18,scale=720:720:flags=lanczos" "$T/h%03d.png"
+ffmpeg -v error -y -i "$M/video/coffee/bean-story-portrait.mp4" -vf "fps=15,scale=540:960:flags=lanczos" "$T/c%03d.png"
+for f in "$T"/h*.png; do n=$(basename "$f" .png); cwebp -quiet -q 72 -sharp_yuv "$f" -o "$M/video/hero/frames/${n#h}.webp"; done
+for f in "$T"/c*.png; do n=$(basename "$f" .png); cwebp -quiet -q 70 -sharp_yuv "$f" -o "$M/video/coffee/frames/${n#c}.webp"; done
+rm -rf "$T"
+
 # Café videos (existing verified segments)
 video() { # src out start duration width poster_at
   local src="$1" out="$2" ss="$3" t="$4" w="$5" pat="$6"

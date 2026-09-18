@@ -136,6 +136,92 @@
     video.load();
   }
 
+  /* ---------- Frame sequence: the phone-safe scrubber ---------- */
+  // iOS Safari won't paint seeks on a video that hasn't been played, so on phones the footage
+  // is a sequence of stills drawn to a canvas. Neighbouring frames are blended by the fractional
+  // position, so motion stays fluid at a modest frame count. Frames load coarse-to-fine.
+  const PHONE_FRAMES = '(max-width: 760px), (pointer: coarse)';
+  function frameScrub(canvas, { dir, count, stiffness = 4, onFrame, onFirst }) {
+    const ctx = canvas.getContext('2d');
+    const imgs = new Array(count);
+    let target = 0, cur = 0, raf = 0, last = 0, drawn = -1, first = false;
+    const url = (i) => `${dir}${String(i + 1).padStart(3, '0')}.webp`;
+    const ok = (i) => imgs[i] && imgs[i].complete && imgs[i].naturalWidth > 0;
+
+    const size = () => {
+      const r = canvas.getBoundingClientRect();
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+      if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; drawn = -1; }
+    };
+    const paint = (img, alpha) => {
+      const cw = canvas.width, ch = canvas.height;
+      const sc = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
+      const w = img.naturalWidth * sc, h = img.naturalHeight * sc;
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(img, (cw - w) / 2, (ch - h) / 2, w, h);
+    };
+    const draw = (f) => {
+      const i = Math.floor(f), t = f - i;
+      let a = i;
+      if (!ok(a)) { // nearest loaded frame while the sequence is still arriving
+        let k = 1;
+        while (k < count && !ok(i - k) && !ok(i + k)) k++;
+        a = ok(i - k) ? i - k : i + k;
+        if (!ok(a)) return false;
+      }
+      paint(imgs[a], 1);
+      if (a === i && t > 0.02 && ok(i + 1)) paint(imgs[i + 1], t);
+      ctx.globalAlpha = 1;
+      drawn = f;
+      if (!first) { first = true; onFirst && onFirst(); }
+      return true;
+    };
+    const frameAt = (p) => clamp(onFrame(p), 0, count - 1);
+    const tick = (now) => {
+      const dt = Math.min(0.064, last ? (now - last) / 1000 : 0.016);
+      last = now;
+      cur += (target - cur) * (1 - Math.exp(-dt * stiffness));
+      if (Math.abs(target - cur) < 0.0004) cur = target;
+      const f = frameAt(cur);
+      if (Math.abs(f - drawn) > 0.004) draw(f);
+      raf = cur !== target ? requestAnimationFrame(tick) : 0;
+      if (!raf) last = 0;
+    };
+    const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
+    const redraw = () => { size(); drawn = -1; draw(frameAt(cur)); };
+
+    // Coarse-to-fine: first frame, then every 8th, 4th, 2nd, then the rest.
+    const order = [];
+    const seen = new Set();
+    [count, 8, 4, 2, 1].forEach((step) => {
+      for (let i = 0; i < count; i += step) if (!seen.has(i)) { seen.add(i); order.push(i); }
+    });
+    order.forEach((i) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => { if (!first || Math.abs(i - frameAt(cur)) < 8) redraw(); };
+      img.src = url(i);
+      imgs[i] = img;
+    });
+    size();
+    if ('ResizeObserver' in window) new ResizeObserver(redraw).observe(canvas);
+    return {
+      set(v) { if (v === target) return; target = v; kick(); },
+      stop() { cancelAnimationFrame(raf); raf = 0; },
+    };
+  }
+
+  // Swaps a <video> for a canvas that inherits its classes (so all styling still applies).
+  function canvasFor(video) {
+    const c = document.createElement('canvas');
+    c.className = video.className;
+    c.setAttribute('role', 'img');
+    c.setAttribute('aria-label', video.getAttribute('aria-label') || '');
+    video.replaceWith(c);
+    return c;
+  }
+
   /* ---------- Hero: the matcha moves only as far as you scroll ---------- */
   // Scroll position sets a target frame; damping eases the footage toward it and then it holds.
   // Nothing plays on its own: no scroll, no movement.
@@ -144,18 +230,27 @@
     const hero = $('[data-hero]');
     if (!video || !heroMedia || !hero) return;
     if (!motionOK()) return; // poster only
-    attachFilm(video);
     let heroH = hero.offsetHeight;
-    const s = scrubber(video, {
-      stiffness: 3.2,
-      onFrame: (p) => {
-        video.style.transform = `scale(${(1 + 0.03 * p).toFixed(4)})`;
-        return p * (video.duration - 0.05);
-      },
-    });
     const shown = () => heroMedia.classList.add('is-playing');
-    video.addEventListener('loadeddata', shown, { once: true });
-    video.addEventListener('seeked', shown, { once: true });
+    let s, el = video;
+    if (matchMedia(PHONE_FRAMES).matches) {
+      el = canvasFor(video);
+      s = frameScrub(el, {
+        dir: 'stagger/video/hero/frames/', count: 74, stiffness: 3.2, onFirst: shown,
+        onFrame: (p) => { el.style.transform = `scale(${(1 + 0.03 * p).toFixed(4)})`; return p * 73; },
+      });
+    } else {
+      attachFilm(video);
+      s = scrubber(video, {
+        stiffness: 3.2,
+        onFrame: (p) => {
+          video.style.transform = `scale(${(1 + 0.03 * p).toFixed(4)})`;
+          return p * (video.duration - 0.05);
+        },
+      });
+      video.addEventListener('loadeddata', shown, { once: true });
+      video.addEventListener('seeked', shown, { once: true });
+    }
     const update = () => s.set(clamp(scrollY / heroH));
     addEventListener('scroll', update, { passive: true });
     addEventListener('resize', () => { heroH = hero.offsetHeight; update(); }, { passive: true });
@@ -693,11 +788,17 @@
         video.poster = `${base}poster-${kind}.webp`;
         film.style.backgroundImage = `url("${base}poster-${kind}.webp")`;
         $('.cfilm__macro', film).src = `${base}macro-${kind}.webp`;
-        attachFilm(video, `${base}${kind}.mp4`);
         const shown = () => film.classList.add('is-ready');
-        video.addEventListener('loadeddata', shown, { once: true });
-        video.addEventListener('seeked', shown, { once: true });
-        s = scrubber(video, { stiffness: 4.2, onFrame: render });
+        if (portrait) {
+          // Phones: canvas frame sequence (15 fps stills), same choreography in frame units.
+          const canvas = canvasFor(video);
+          s = frameScrub(canvas, { dir: 'stagger/video/coffee/frames/', count: 142, stiffness: 4.2, onFirst: shown, onFrame: (p) => render(p) * 15 });
+        } else {
+          attachFilm(video, `${base}${kind}.mp4`);
+          video.addEventListener('loadeddata', shown, { once: true });
+          video.addEventListener('seeked', shown, { once: true });
+          s = scrubber(video, { stiffness: 4.2, onFrame: render });
+        }
         s.set(last);
       };
       const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { load(); io.disconnect(); } }, { rootMargin: '150% 0px' });
