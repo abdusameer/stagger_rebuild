@@ -136,53 +136,73 @@
     video.load();
   }
 
-  /* ---------- Hero: one motion system — slow idle drift plus scroll momentum ---------- */
+  /* ---------- Hero: the matcha moves only while you scroll ---------- */
   // The loop file is cross-faded end-to-start, so playback always moves forward and never seams.
-  // Scroll speed raises the playback rate; damping carries it back down to the idle rate.
+  // Scroll speed sets a playback rate; damping carries it down to a stop, and the frame holds.
   function initHeroVideo() {
     const video = $('[data-hero-video]');
     const hero = $('[data-hero]');
     if (!video || !heroMedia || !hero) return;
+    video.removeAttribute('autoplay');
+    video.autoplay = false;
     attachFilm(video);
-    const IDLE = 0.32, MAX = 1.35;
-    let rate = IDLE, boost = 0, lastY = scrollY, lastT = 0, raf = 0, visible = true;
+    const MAX = 1.6, STOP = 0.05;
+    let rate = 0, boost = 0, vel = 0, lastY = scrollY, lastT = 0, raf = 0, visible = true;
     let heroH = hero.offsetHeight;
 
     const play = () => {
-      if (!visible || document.hidden) return;
+      if (!visible || document.hidden || !video.paused) return;
       const p = video.play();
       if (p && p.catch) p.catch(() => {});
     };
-    video.addEventListener('playing', () => heroMedia.classList.add('is-playing'));
-    video.addEventListener('loadeddata', () => { video.playbackRate = rate; play(); });
-    // Low Power Mode blocks autoplay until a real tap; the poster holds until then.
-    const unlock = () => { play(); if (!video.paused) ['touchend', 'click', 'keydown'].forEach((t) => removeEventListener(t, unlock)); };
+    // The held first frame matches the poster, so the video can show as soon as it has one.
+    const shown = () => heroMedia.classList.add('is-playing');
+    video.addEventListener('loadeddata', shown);
+    video.addEventListener('playing', shown);
+    // Low Power Mode blocks play() until a real tap; the frame holds until then.
+    const unlock = () => {
+      if (!video.paused || rate < STOP) return;
+      play();
+      ['touchend', 'click', 'keydown'].forEach((t) => removeEventListener(t, unlock));
+    };
     ['touchend', 'click', 'keydown'].forEach((t) => addEventListener(t, unlock, { passive: true }));
 
     const tick = (now) => {
       const dt = Math.min(0.1, lastT ? (now - lastT) / 1000 : 0.016);
       lastT = now;
       const y = scrollY;
-      const v = Math.abs(y - lastY) / dt; // px per second
+      // Scroll events arrive in bursts, so the speed is low-passed before it drives anything.
+      vel += (Math.abs(y - lastY) / dt - vel) * (1 - Math.exp(-dt * 8)); // px per second
       lastY = y;
-      // Momentum: velocity pushes the boost up quickly, then it decays slowly back to idle.
-      const want = motionOK() ? Math.min(1, v / 1600) : 0;
+      // Speed pushes the boost up quickly; when scrolling stops it decays slowly to zero.
+      const want = Math.min(1, vel / 650);
       boost += (want - boost) * (1 - Math.exp(-dt * (want > boost ? 5 : 1.1)));
-      const target = IDLE + (MAX - IDLE) * boost;
-      rate += (target - rate) * (1 - Math.exp(-dt * 3));
-      if (Math.abs(video.playbackRate - rate) > 0.008 && video.readyState >= 2) video.playbackRate = rate;
-      if (motionOK()) video.style.transform = `scale(${(1 + 0.03 * clamp(y / heroH)).toFixed(4)})`;
-      raf = visible && !document.hidden ? requestAnimationFrame(tick) : 0;
+      rate += (MAX * boost - rate) * (1 - Math.exp(-dt * 3));
+      if (rate < STOP && boost < STOP && vel < 20) {
+        // Settled: hold the current frame and stop the loop.
+        rate = 0; boost = 0; vel = 0;
+        if (!video.paused) video.pause();
+      } else if (video.readyState >= 2) {
+        const r = Math.max(rate, 0.0625);
+        if (Math.abs(video.playbackRate - r) > 0.008) video.playbackRate = r;
+        play();
+      }
+      video.style.transform = `scale(${(1 + 0.03 * clamp(y / heroH)).toFixed(4)})`;
+      raf = (rate > 0 || vel > 0) && visible && !document.hidden ? requestAnimationFrame(tick) : 0;
       if (!raf) lastT = 0;
     };
-    const start = () => { if (!raf) raf = requestAnimationFrame(tick); play(); };
+    const wake = () => {
+      if (raf || !visible || document.hidden) return;
+      lastY = scrollY - 4; // the first frame of a scroll already counts as movement
+      raf = requestAnimationFrame(tick);
+    };
+    if (motionOK()) addEventListener('scroll', wake, { passive: true });
     new IntersectionObserver(([e]) => {
       visible = e.isIntersecting;
-      if (visible) start(); else video.pause();
+      if (!visible) video.pause();
     }, { rootMargin: '10% 0px' }).observe(hero);
-    document.addEventListener('visibilitychange', () => { if (document.hidden) video.pause(); else start(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) video.pause(); });
     addEventListener('resize', () => { heroH = hero.offsetHeight; }, { passive: true });
-    start();
   }
 
   /* ---------- Video: play only when visible ---------- */
