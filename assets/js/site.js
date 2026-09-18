@@ -83,39 +83,86 @@
   document.fonts && document.fonts.ready.then(measureSplit);
 
 
-  /* ---------- Hero video: poster first, fade in only once frames are playing ---------- */
+  /* ---------- Scrubbed footage: scroll sets a target, the frame eases toward it ---------- */
+  const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
+
+  // Seeks are coalesced: one currentTime write per frame, never while a seek is in flight.
+  function scrubber(video, { stiffness = 5, onFrame } = {}) {
+    let target = 0, cur = 0, raf = 0, last = 0, ready = false;
+    const frame = 1 / 48;
+    const tick = (now) => {
+      const dt = Math.min(0.064, last ? (now - last) / 1000 : 0.016);
+      last = now;
+      cur += (target - cur) * (1 - Math.exp(-dt * stiffness));
+      if (Math.abs(target - cur) < 0.0004) cur = target;
+      const t = onFrame ? onFrame(cur) : null;
+      let pending = false;
+      if (ready && t != null && isFinite(video.duration)) {
+        const want = clamp(t, 0, video.duration - 0.04);
+        if (Math.abs(video.currentTime - want) > frame) {
+          if (!video.seeking) video.currentTime = want;
+          pending = true;
+        }
+      }
+      raf = cur !== target || pending ? requestAnimationFrame(tick) : 0;
+      if (!raf) last = 0;
+    };
+    const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
+    // iOS only decodes after a play(): start and immediately pause, then we own the clock.
+    const prime = () => {
+      if (ready) return;
+      const done = () => { video.pause(); ready = true; video.dispatchEvent(new Event('scrubready')); kick(); };
+      const p = video.play();
+      if (p && p.then) p.then(done, () => {}); else done();
+    };
+    if (video.readyState >= 1) prime(); else video.addEventListener('loadedmetadata', prime, { once: true });
+    const unlock = () => { prime(); ['pointerdown', 'touchstart', 'keydown'].forEach((t) => removeEventListener(t, unlock)); };
+    ['pointerdown', 'touchstart', 'keydown'].forEach((t) => addEventListener(t, unlock, { passive: true }));
+    return {
+      set(v) { if (v === target) return; target = v; kick(); },
+      jump(v) { target = cur = v; kick(); },
+      get value() { return cur; },
+      stop() { cancelAnimationFrame(raf); raf = 0; },
+    };
+  }
+
+  // Scrubbed films are held in memory: seeking then never waits on the network or on range support.
+  async function attachFilm(video) {
+    const sources = $$('source', video);
+    const pick = sources.find((el) => !el.media || matchMedia(el.media).matches) || sources[0];
+    if (!pick) return;
+    const url = pick.dataset.src || pick.getAttribute('src');
+    sources.forEach((el) => el.remove());
+    video.preload = 'auto';
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(res.status);
+      video.src = URL.createObjectURL(await res.blob());
+    } catch { video.src = url; }
+    video.load();
+  }
+
+  /* ---------- Hero: the matcha moves only as far as you scroll ---------- */
   function initHeroVideo() {
     const video = $('[data-hero-video]');
-    if (!video || !heroMedia) return;
-    if (!motionOK()) {
-      video.removeAttribute('autoplay');
-      video.preload = 'metadata';
-      video.pause();
-      return;
-    }
-    let inView = true;
-    const markPlaying = () => heroMedia.classList.add('is-playing');
-    const tryPlay = () => {
-      if (!inView || document.hidden || !video.paused) return;
-      const p = video.play();
-      if (p && p.catch) p.catch(() => {});
-    };
-    video.addEventListener('playing', markPlaying);
-    video.addEventListener('canplay', tryPlay);
-    if (!video.paused && video.readyState > 2) markPlaying();
-    tryPlay();
-
-    const unlock = () => { tryPlay(); ['pointerdown', 'keydown', 'touchstart'].forEach((t) => removeEventListener(t, unlock)); };
-    ['pointerdown', 'keydown', 'touchstart'].forEach((t) => addEventListener(t, unlock, { passive: true }));
-
-    new IntersectionObserver(([entry]) => {
-      inView = entry.isIntersecting;
-      if (inView) tryPlay(); else video.pause();
-    }, { rootMargin: '50% 0px' }).observe(heroMedia);
-
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) video.pause(); else tryPlay();
+    const hero = $('[data-hero]');
+    if (!video || !heroMedia || !hero) return;
+    if (!motionOK()) return;
+    attachFilm(video);
+    let heroH = hero.offsetHeight;
+    const lead = 0.3; // the ice settles a little as the page opens
+    const s = scrubber(video, {
+      stiffness: 3.2,
+      onFrame: (p) => {
+        video.style.transform = `scale(${(1 + 0.03 * p).toFixed(4)})`;
+        return lead + p * (video.duration - lead - 0.05);
+      },
     });
+    video.addEventListener('scrubready', () => heroMedia.classList.add('is-playing'));
+    const update = () => s.set(clamp(scrollY / heroH));
+    addEventListener('scroll', update, { passive: true });
+    addEventListener('resize', () => { heroH = hero.offsetHeight; update(); }, { passive: true });
+    update();
   }
 
   /* ---------- Video: play only when visible ---------- */
@@ -310,10 +357,16 @@
       trigger: track,
       start: 'top top',
       end: 'bottom bottom',
-      onUpdate: (self) => setActive(Math.min(n - 1, Math.floor(self.progress * n))),
+      onUpdate: (self) => {
+        const x = self.progress * n;
+        const i = Math.min(n - 1, Math.floor(x));
+        setActive(i);
+        track.style.setProperty('--cp', clamp(x - i).toFixed(3));
+      },
     });
     const cleanup = () => {
       st.kill();
+      track.style.removeProperty('--cp');
       items.forEach((el) => { el.classList.remove('is-active', 'is-past'); el.removeAttribute('aria-hidden'); });
     };
     return { st, cleanup };
@@ -414,11 +467,6 @@
       ease: 'none',
       scrollTrigger: { trigger: '[data-hero]', start: 'top top', end: '45% top', scrub: 0.8 },
     });
-    gsap.to('.hero__video', {
-      scale: 1.02,
-      ease: 'none',
-      scrollTrigger: { trigger: '[data-hero]', start: 'top top', end: 'bottom top', scrub: true },
-    });
 
     // The circle drifts a little toward equilibrium as the hero leaves.
     const stage = $('[data-hero-stage]');
@@ -449,7 +497,7 @@
     const n = items.length;
     section.style.setProperty('--n', n);
 
-    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference)', () => {
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
       section.classList.add('is-sequenced');
       const { st, cleanup } = sequence({
         track,
@@ -488,7 +536,7 @@
     const chapters = $$('[data-mchap]', section);
     const index = $$('.mstory__index li', section);
 
-    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference)', () => {
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
       section.classList.add('is-sequenced');
       const { cleanup } = sequence({
         track,
@@ -532,7 +580,7 @@
     const stepName = $('[data-mshop-name]', section);
     const names = objects.map((o) => o.querySelector('.mobj__name').textContent.trim());
 
-    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference)', () => {
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
       section.classList.add('is-sequenced');
       let current = -1;
       const setActive = (i) => {
@@ -560,33 +608,93 @@
     });
   }
 
-  /* ---------- Coffee: cup → beans → roast → product ---------- */
+  /* ---------- Coffee: one film, seven beats ---------- */
+  // Scroll progress (0–1) → film time, piecewise so each beat gets the footage it describes.
+  const FILM = [[0, 0], [0.40, 4.8], [0.50, 5.6], [0.66, 7.8], [0.705, 7.8], [0.72, 7.95], [0.84, 9.36], [1, 9.36]];
+  const BEATS = [0, 0.12, 0.26, 0.40, 0.50, 0.66, 0.84];
+  const NOTES = [0.50, 0.555, 0.61];
+  const ramp = (p, a, b) => clamp((p - a) / (b - a));
+  const ease = (x) => x * x * (3 - 2 * x);
+  function filmTime(p) {
+    for (let i = 1; i < FILM.length; i++) {
+      const [p1, t1] = FILM[i];
+      if (p <= p1) { const [p0, t0] = FILM[i - 1]; return t0 + (t1 - t0) * ((p - p0) / (p1 - p0 || 1)); }
+    }
+    return FILM[FILM.length - 1][1];
+  }
+
   function initCoffee(mm) {
     const section = $('[data-coffee]');
     if (!section) return;
     const track = $('[data-cstory]', section);
     const stage = $('[data-cstory-stage]', section);
-    const chapters = $$('[data-cchap]', section);
-    const index = $$('.cstory__index li', section);
+    const film = $('.cfilm', section);
+    const video = $('[data-cfilm]', section);
+    const beats = $$('[data-cbeat]', section);
+    const notes = $$('[data-note]', section);
+    const meter = $('[data-cmeter]', section);
+    const count = $('[data-ccount]', section);
 
-    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference)', () => {
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
       section.classList.add('is-sequenced');
-      const { cleanup } = sequence({
-        track,
-        items: chapters,
-        onChange: (i) => index.forEach((li, k) => li.classList.toggle('is-active', k === i)),
+      let beat = -1, s = null;
+      const setBeat = (i) => {
+        if (i === beat) return;
+        beat = i;
+        beats.forEach((el, k) => {
+          el.classList.toggle('is-active', k === i);
+          el.classList.toggle('is-past', k < i);
+          el.setAttribute('aria-hidden', String(k !== i));
+        });
+        count.textContent = String(i + 1).padStart(2, '0');
+      };
+      const render = (p) => {
+        let i = 0;
+        while (i < BEATS.length - 1 && p >= BEATS[i + 1]) i++;
+        setBeat(i);
+        notes.forEach((li, k) => li.classList.toggle('is-in', p >= NOTES[k]));
+        const reveal = ease(ramp(p, 0.655, 0.715));
+        const prod = ease(ramp(p, 0.80, 0.90));
+        stage.style.setProperty('--reveal', reveal.toFixed(4));
+        stage.style.setProperty('--push', ramp(p, 0.72, 0.86).toFixed(4));
+        stage.style.setProperty('--prod', prod.toFixed(4));
+        // The still close-up covers the cut, then hands back to the moving footage.
+        stage.classList.toggle('is-revealing', reveal > 0 && p < 0.724);
+        stage.classList.toggle('has-prod', prod > 0);
+        // Over the close-up the type turns light; it returns to ink as the product arrives.
+        stage.classList.toggle('is-dark', p >= 0.69 && p < 0.815);
+        meter.style.transform = `scaleX(${p.toFixed(4)})`;
+        return filmTime(p);
+      };
+      setBeat(0);
+      render(0);
+
+      // Fetch the film only when the section is close.
+      const load = () => {
+        if (video.dataset.loaded) return;
+        video.dataset.loaded = '1';
+        attachFilm(video);
+        s = scrubber(video, { stiffness: 4.2, onFrame: render });
+        video.addEventListener('scrubready', () => film.classList.add('is-ready'), { once: true });
+      };
+      const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { load(); io.disconnect(); } }, { rootMargin: '150% 0px' });
+      io.observe(section);
+
+      const st = ScrollTrigger.create({
+        trigger: track, start: 'top top', end: 'bottom bottom',
+        onUpdate: (self) => { if (s) s.set(self.progress); else render(self.progress); },
       });
       ScrollTrigger.refresh();
       return () => {
         section.classList.remove('is-sequenced');
-        cleanup();
-        index.forEach((li) => li.classList.remove('is-active'));
+        st.kill(); io.disconnect();
+        if (s) s.stop();
+        beats.forEach((el) => { el.classList.remove('is-active', 'is-past'); el.removeAttribute('aria-hidden'); });
+        notes.forEach((li) => li.classList.remove('is-in'));
+        stage.classList.remove('is-revealing', 'has-prod', 'is-dark');
+        ['--reveal', '--push', '--prod'].forEach((v) => stage.style.removeProperty(v));
       };
     });
-
-    // A soft sunlight pool rather than a cursor glow.
-    mm.add('(min-width: 1024px) and (prefers-reduced-motion: no-preference) and (pointer: fine)', () =>
-      studioLight(stage, { reach: 0.14, lerp: 0.03 }));
   }
 
   /* ---------- Press: expand the verified features ---------- */
@@ -601,6 +709,42 @@
       press.classList.toggle('is-open', !open);
       label.textContent = open ? 'Read the features' : 'Hide the features';
       if (hasGSAP) ScrollTrigger.refresh();
+    });
+  }
+
+  /* ---------- Depth: photographs drift inside their frames, frames open as they arrive ---------- */
+  function initDepth(mm) {
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      $$('[data-depth]').forEach((fig) => {
+        const media = fig.querySelector('img, video');
+        if (!media) return;
+        gsap.fromTo(media, { yPercent: -5, scale: 1.12 }, {
+          yPercent: 5, scale: 1.04, ease: 'none',
+          scrollTrigger: { trigger: fig, start: 'top bottom', end: 'bottom top', scrub: true },
+        });
+      });
+      $$('[data-unmask]').forEach((fig) => {
+        gsap.fromTo(fig, { clipPath: 'inset(9% 7% 9% 7%)' }, {
+          clipPath: 'inset(0% 0% 0% 0%)', ease: 'none',
+          scrollTrigger: { trigger: fig, start: 'top 96%', end: 'top 40%', scrub: 0.6 },
+        });
+      });
+      const press = $$('.press__list li');
+      if (press.length) {
+        gsap.from(press, {
+          y: 22, autoAlpha: 0, duration: 0.9, ease: 'power3.out', stagger: 0.07,
+          scrollTrigger: { trigger: '.press__list', start: 'top 88%', once: true },
+        });
+      }
+    });
+    // Phones: the second column of objects travels a little slower than the first.
+    mm.add('(max-width: 760px) and (prefers-reduced-motion: no-preference)', () => {
+      const even = $$('.object:nth-child(even) > a');
+      if (!even.length) return;
+      gsap.fromTo(even, { y: 36 }, {
+        y: -36, ease: 'none',
+        scrollTrigger: { trigger: '.objects__list', start: 'top bottom', end: 'bottom top', scrub: true },
+      });
     });
   }
 
@@ -637,6 +781,7 @@
   initMatcha(mm);
   initShop(mm);
   initCoffee(mm);
+  initDepth(mm);
   initFades();
   initPress();
 

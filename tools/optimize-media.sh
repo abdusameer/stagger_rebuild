@@ -86,15 +86,27 @@ for w in 1200 2000; do webp "$M/images/products/pastry-and-drink-flatlay-black-t
 webp "$M/images/lifestyle/red-green-drink-blue-sky.jpg" 1000
 webp "$M/images/interior/two-drinks-black-table-interior.jpg" 1000
 
-# Hero video: the original Stagger macro montage (1080p master) -> 1080 + 720, no audio, fast-start.
-HERO="$M/video/hero/macro-drink-montage-hq-1080p.mp4"
-ffmpeg -v error -y -i "$HERO" -an -c:v libx264 -preset slower -crf 22 -maxrate 2300k -bufsize 4600k \
-  -pix_fmt yuv420p -profile:v high -level 4.1 -tune film -movflags +faststart "$M/video/hero/hero-montage-1080.mp4"
-ffmpeg -v error -y -i "$HERO" -an -c:v libx264 -preset slower -crf 22 -maxrate 1200k -bufsize 2400k \
-  -pix_fmt yuv420p -profile:v high -tune film -vf "scale=720:-2:flags=lanczos" -movflags +faststart "$M/video/hero/hero-montage-720.mp4"
-ffmpeg -v error -y -ss 0.4 -i "$HERO" -frames:v 1 -q:v 2 /tmp/stagger-hero-poster.jpg
-cwebp -quiet -q 84 -sharp_yuv -resize 1080 0 /tmp/stagger-hero-poster.jpg -o "$M/video/hero/hero-montage-poster.webp"
-rm /tmp/stagger-hero-poster.jpg
+# Hero video: top-down matcha (portrait master) cropped square around the glass, which also drops the
+# generator mark in the bottom corner. Short GOP so scroll-scrubbing seeks cheaply.
+HERO="$M/video/hero/vidu-video-3471260911613331.mp4"
+SCRUB="-an -c:v libx264 -preset slow -pix_fmt yuv420p -sc_threshold 0 -bf 0 -movflags +faststart"
+ffmpeg -v error -y -i "$HERO" -vf "crop=1080:1080:0:400" $SCRUB -crf 21 -g 2 -keyint_min 2 "$M/video/hero/matcha-topdown-1080.mp4"
+ffmpeg -v error -y -i "$HERO" -vf "crop=1080:1080:0:400,scale=720:720:flags=lanczos" $SCRUB -crf 22 -g 2 -keyint_min 2 "$M/video/hero/matcha-topdown-720.mp4"
+ffmpeg -v error -y -i "$M/video/hero/matcha-topdown-1080.mp4" -frames:v 1 -q:v 2 /tmp/stagger-hero-poster.jpg
+cwebp -quiet -q 82 -sharp_yuv /tmp/stagger-hero-poster.jpg -o "$M/video/hero/matcha-topdown-poster.webp" && rm /tmp/stagger-hero-poster.jpg
+
+# Coffee film: frames 119–132 (a second bean morphs in) are cut, so the bean lands in one clean edit.
+COFFEE="$M/video/Staggercoffee.mp4"
+mkdir -p "$M/video/coffee"
+ffmpeg -v error -y -i "$COFFEE" -filter_complex \
+  "[0:v]trim=start_frame=0:end_frame=119,setpts=PTS-STARTPTS[a];[0:v]trim=start_frame=133:end_frame=240,setpts=PTS-STARTPTS[b];[a][b]concat=n=2:v=1[c]" \
+  -map "[c]" $SCRUB -crf 21 -g 4 -keyint_min 4 "$M/video/coffee/bean-story-1280.mp4"
+for pair in "0:poster:80" "7.9:macro:82"; do
+  IFS=: read -r at name q <<< "$pair"
+  ffmpeg -v error -y -ss "$at" -i "$M/video/coffee/bean-story-1280.mp4" -frames:v 1 -q:v 2 /tmp/stagger-coffee.jpg
+  cwebp -quiet -q "$q" -sharp_yuv /tmp/stagger-coffee.jpg -o "$M/video/coffee/bean-story-$name.webp"
+done
+rm -f /tmp/stagger-coffee.jpg
 
 # Café videos (existing verified segments)
 video() { # src out start duration width poster_at

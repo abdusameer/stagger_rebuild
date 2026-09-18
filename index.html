@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@500;600&family=Inter:wght@400;500&display=swap">
-  <link rel="preload" as="image" href="stagger/video/hero/hero-montage-poster.webp" fetchpriority="high">
+  <link rel="preload" as="image" href="stagger/video/hero/matcha-topdown-poster.webp" fetchpriority="high">
   <link rel="stylesheet" href="assets/css/site.css">
   <link rel="icon" href="stagger/images/brand/stagger-logo.png">
 </head>
@@ -60,12 +60,12 @@
         <span class="hero__light" aria-hidden="true"><i></i></span>
         <figure class="hero__media" data-hero-media>
           <span class="hero__disc" data-hero-disc>
-            <video class="hero__video" autoplay muted loop playsinline preload="auto"
+            <video class="hero__video" muted playsinline preload="none"
               disablepictureinpicture disableremoteplayback
-              poster="stagger/video/hero/hero-montage-poster.webp" data-hero-video
-              aria-label="Close-up footage of Stagger drinks: matcha, espresso and iced latte over ice">
-              <source src="stagger/video/hero/hero-montage-720.mp4" type="video/mp4" media="(max-width: 760px)">
-              <source src="stagger/video/hero/hero-montage-1080.mp4" type="video/mp4">
+              poster="stagger/video/hero/matcha-topdown-poster.webp" data-hero-video
+              aria-label="Top-down view of an iced matcha latte, ice drifting through the matcha">
+              <source data-src="stagger/video/hero/matcha-topdown-720.mp4" type="video/mp4" media="(max-width: 760px)">
+              <source data-src="stagger/video/hero/matcha-topdown-1080.mp4" type="video/mp4">
             </video>
           </span>
           <span class="hero__rim" aria-hidden="true"></span>
@@ -94,7 +94,7 @@
       <p class="label story__label"><span class="idx">01</span> Our story</p>
       <h2 class="display story__title" data-split data-overlap="[data-story-media]">A place to <em class="serif">pause.</em> Reset. Reconnect.</h2>
 
-      <figure class="story__media" data-story-media data-reveal>
+      <figure class="story__media" data-story-media data-reveal data-depth>
         <img src="stagger/images/people/journaling-with-matcha-sunlit-table-1200.webp"
           srcset="stagger/images/people/journaling-with-matcha-sunlit-table-1200.webp 1200w, stagger/images/people/journaling-with-matcha-sunlit-table-2000.webp 2000w"
           sizes="(min-width: 1024px) 58vw, 92vw" width="1200" height="800" loading="lazy" decoding="async"
@@ -215,11 +215,11 @@
           <div class="drinks__rail">
             <div class="drinks__bar"><span data-drinks-bar></span></div>
             <div class="drinks__ticks">
-              <button type="button" data-drink-jump="0"><span>Double Matcha</span></button>
-              <button type="button" data-drink-jump="1"><span>Cream Top</span></button>
-              <button type="button" data-drink-jump="2"><span>Strawberry Matcha</span></button>
-              <button type="button" data-drink-jump="3"><span>Stagger Tonic</span></button>
-              <button type="button" data-drink-jump="4"><span>Donut Latte</span></button>
+              <button type="button" data-drink-jump="0"><b aria-hidden="true">01</b><span>Double Matcha</span></button>
+              <button type="button" data-drink-jump="1"><b aria-hidden="true">02</b><span>Cream Top</span></button>
+              <button type="button" data-drink-jump="2"><b aria-hidden="true">03</b><span>Strawberry Matcha</span></button>
+              <button type="button" data-drink-jump="3"><b aria-hidden="true">04</b><span>Stagger Tonic</span></button>
+              <button type="button" data-drink-jump="4"><b aria-hidden="true">05</b><span>Donut Latte</span></button>
             </div>
           </div>
         </div>
@@ -245,7 +245,7 @@
             </figure>
           </article>
 
-          <article class="mchap mchap--origin" data-mchap>
+          <article class="mchap mchap--origin" data-mchap data-pullback>
             <div class="mchap__copy">
               <p class="label mchap__n">i — Origin</p>
               <h3 class="mchap__t">Uji &amp; Kagoshima.</h3>
@@ -334,69 +334,63 @@
     <section class="coffee" id="coffee" data-theme="oat" data-coffee>
       <div class="cstory" data-cstory>
         <div class="cstory__stage" data-cstory-stage>
-          <span class="cstory__sun" aria-hidden="true"><i></i></span>
+          <figure class="cfilm">
+            <video class="cfilm__video" muted playsinline preload="none" disablepictureinpicture disableremoteplayback
+              poster="stagger/video/coffee/bean-story-poster.webp" data-cfilm
+              aria-label="A single roasted coffee bean floats in warm light, falls, lands in a burst of grounds, then fills the frame in close-up">
+              <source data-src="stagger/video/coffee/bean-story-1280.mp4" type="video/mp4">
+            </video>
+            <img class="cfilm__macro" src="stagger/video/coffee/bean-story-macro.webp" width="1280" height="720" loading="lazy" decoding="async"
+              alt="Extreme close-up of the roasted bean, its centre crease and cracked surface filling the frame">
+          </figure>
 
-          <article class="cchap cchap--cup" data-cchap>
-            <div class="cchap__copy">
+          <figure class="cprod">
+            <img src="stagger/images/coffee/coffee-bean-bag-1-900.webp"
+              srcset="stagger/images/coffee/coffee-bean-bag-1-900.webp 900w, stagger/images/coffee/coffee-bean-bag-1-1200.webp 1200w"
+              sizes="(min-width: 1024px) 40vw, 100vw" width="1365" height="2048" loading="lazy" decoding="async"
+              alt="A white Stagger coffee bag spilling whole roasted beans across a warm surface">
+          </figure>
+
+          <div class="cbeats">
+            <article class="cbeat cbeat--bean" data-cbeat>
               <p class="label"><span class="idx">04</span> Coffee</p>
               <h2 class="display coffee__title" data-split>Clean, <em class="serif">bright</em> coffee.</h2>
-            </div>
-            <figure class="cchap__media" data-fade>
-              <img src="stagger/images/coffee/latte-art-cappuccino-coffee-beans-1200.webp"
-                srcset="stagger/images/coffee/latte-art-cappuccino-coffee-beans-1200.webp 1200w, stagger/images/coffee/latte-art-cappuccino-coffee-beans-2000.webp 2000w"
-                sizes="(min-width: 1024px) 56vw, 92vw" width="1200" height="800" loading="lazy" decoding="async"
-                alt="A cappuccino with rosetta latte art in a Stagger cup, surrounded by scattered coffee beans on a wooden stool">
-            </figure>
-          </article>
-
-          <article class="cchap cchap--beans" data-cchap>
-            <div class="cchap__copy">
-              <p class="label cchap__n">i — Beans</p>
-              <h3 class="cchap__t">Whole bean.</h3>
-              <p class="cchap__b">Roasted in Los Angeles.</p>
-            </div>
-            <figure class="cchap__media" data-fade>
-              <img src="stagger/images/coffee/roast-bean-macro-1400.webp"
-                srcset="stagger/images/coffee/roast-bean-macro-1400.webp 1400w, stagger/images/coffee/roast-bean-macro-2200.webp 2200w"
-                sizes="(min-width: 1024px) 58vw, 96vw" width="2752" height="1536" loading="lazy" decoding="async"
-                alt="Extreme close-up of a roasted coffee bean, its oily surface and centre crease lit warmly">
-            </figure>
-          </article>
-
-          <article class="cchap cchap--roast" data-cchap>
-            <div class="cchap__copy">
-              <p class="label cchap__n">ii — Roast</p>
-              <dl class="specs">
-                <div><dt>Origin</dt><dd>Brazil &amp; Colombia</dd></div>
-                <div><dt>Roast</dt><dd>Medium-dark</dd></div>
-                <div><dt>Notes</dt><dd>Honey, cacao, dried fruit</dd></div>
-                <div><dt>Roasted</dt><dd>Los Angeles</dd></div>
-              </dl>
-            </div>
-            <figure class="cchap__media" data-fade>
-              <img src="stagger/images/coffee/bean-at-rest-557.webp" width="557" height="400" loading="lazy" decoding="async"
-                alt="A single roasted coffee bean resting in sunlight on a pale surface, scattered with fine grounds">
-            </figure>
-          </article>
-
-          <article class="cchap cchap--product" data-cchap>
-            <div class="cchap__copy">
-              <p class="label cchap__n">iii — Product</p>
-              <h3 class="cchap__t">STAGGER Coffee Bean</h3>
-              <p class="cchap__price">$20.00</p>
+              <p class="cbeat__n label">01 — The bean</p>
+            </article>
+            <article class="cbeat" data-cbeat>
+              <p class="cbeat__n label">02 — Origin</p>
+              <h3 class="cbeat__t">Brazil <em class="serif">&amp;</em> Colombia.</h3>
+            </article>
+            <article class="cbeat" data-cbeat>
+              <p class="cbeat__n label">03 — Roast</p>
+              <h3 class="cbeat__t">Medium-dark.</h3>
+              <p class="cbeat__b">Roasted in Los Angeles.</p>
+            </article>
+            <article class="cbeat cbeat--impact" data-cbeat>
+              <p class="cbeat__n label">04 — Impact</p>
+            </article>
+            <article class="cbeat cbeat--notes" data-cbeat>
+              <p class="cbeat__n label">05 — Notes</p>
+              <ul class="notes">
+                <li data-note>Honey</li>
+                <li data-note>Cacao</li>
+                <li data-note>Dried fruit</li>
+              </ul>
+            </article>
+            <article class="cbeat cbeat--macro" data-cbeat>
+              <p class="cbeat__n label">06 — Up close</p>
+              <h3 class="cbeat__t">Whole bean.</h3>
+            </article>
+            <article class="cbeat cbeat--product" data-cbeat>
+              <p class="cbeat__n label">07 — Product</p>
+              <h3 class="cbeat__t">STAGGER Coffee Bean</h3>
+              <p class="cbeat__price">$20.00</p>
               <a class="btn" href="https://staggercoffee.com/products/stagger-coffee-bean">Shop coffee</a>
-            </div>
-            <figure class="cchap__media" data-fade>
-              <img src="stagger/images/coffee/coffee-bean-bag-1-900.webp"
-                srcset="stagger/images/coffee/coffee-bean-bag-1-900.webp 900w, stagger/images/coffee/coffee-bean-bag-1-1200.webp 1200w"
-                sizes="(min-width: 1024px) 42vw, 86vw" width="1365" height="2048" loading="lazy" decoding="async"
-                alt="A white Stagger coffee bag spilling whole roasted beans across a warm surface">
-            </figure>
-          </article>
+            </article>
+          </div>
 
-          <ol class="cstory__index" aria-hidden="true">
-            <li>Cup</li><li>Beans</li><li>Roast</li><li>Product</li>
-          </ol>
+          <div class="cstory__meter" aria-hidden="true"><span data-cmeter></span></div>
+          <p class="cstory__count label" aria-hidden="true"><span data-ccount>01</span> / 07</p>
         </div>
       </div>
     </section>
@@ -453,24 +447,24 @@
         <p class="community__sub">Wilshire Center — Koreatown, Los Angeles.</p>
       </header>
 
-      <figure class="community__a" data-reveal>
+      <figure class="community__a" data-reveal data-depth data-unmask>
         <img src="stagger/images/products/pastry-and-drink-flatlay-black-table-1200.webp"
           srcset="stagger/images/products/pastry-and-drink-flatlay-black-table-1200.webp 1200w, stagger/images/products/pastry-and-drink-flatlay-black-table-2000.webp 2000w"
           sizes="(min-width: 1024px) 58vw, 92vw" width="1200" height="800" loading="lazy" decoding="async"
           alt="Overhead spread of pastries and drinks on Stagger paper: a blackberry danish, blueberry muffin, swirl pastry, cappuccino, matcha and mocha">
       </figure>
-      <figure class="community__b" data-reveal>
+      <figure class="community__b" data-reveal data-depth>
         <video muted loop playsinline preload="none" data-video
           poster="stagger/video/cafe/three-drinks-interior-reveal-web-poster.webp"
           aria-label="Inside the café: a matcha, an iced latte and a crimson drink are set side by side on the wooden counter">
           <source src="stagger/video/cafe/three-drinks-interior-reveal-web.mp4" type="video/mp4">
         </video>
       </figure>
-      <figure class="community__c" data-reveal>
+      <figure class="community__c" data-reveal data-depth>
         <img src="stagger/images/lifestyle/red-green-drink-blue-sky-1000.webp" width="1000" height="1333" loading="lazy" decoding="async"
           alt="A layered green and crimson Stagger drink held up against a clear blue sky">
       </figure>
-      <figure class="community__d" data-reveal>
+      <figure class="community__d" data-reveal data-depth>
         <img src="stagger/images/interior/two-drinks-black-table-interior-1000.webp" width="1000" height="1294" loading="lazy" decoding="async"
           alt="Two iced drinks dusted with cinnamon on a black metal table, a bentwood chair behind">
       </figure>
@@ -539,7 +533,7 @@
         </div>
       </div>
 
-      <figure class="visit__media" data-reveal>
+      <figure class="visit__media" data-reveal data-unmask>
         <video muted loop playsinline preload="none" data-video
           poster="stagger/video/cafe/stagger-wall-mural-web-poster.webp"
           aria-label="Drinks raised in front of the painted Stagger wordmark on a white brick wall">
